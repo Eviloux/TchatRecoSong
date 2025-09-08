@@ -1,7 +1,11 @@
-@import 'variables';
-@import 'mixins';
-@import 'songlist';
-@import 'adminpanel';
+
+
+// Nouveau
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'songlist' as *;
+@use 'adminpanel' as *;
+
 
 // Styles globaux
 body {
