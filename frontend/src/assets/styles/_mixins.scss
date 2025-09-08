@@ -1,5 +1,7 @@
 // src/assets/styles/_mixins.scss
 
+@use 'variables' as vars;
+
 @mixin flex-center {
   display: flex;
   justify-content: center;
@@ -7,17 +9,17 @@
 }
 
 @mixin input-style {
-  padding: $spacing;
-  border-radius: $border-radius;
-  border: 1px solid $primary-color;
-  font-family: $font-family;
+  padding: vars.$spacing;
+  border-radius: vars.$border-radius;
+  border: 1px solid vars.$primary-color;
+  font-family: vars.$font-family;
   font-size: 1rem;
-  color: $text-color;
+  color: vars.$text-color;
 }
 
 @mixin card-style {
-  background-color: $background-color;
-  padding: $spacing-medium;
-  border-radius: $border-radius;
+  background-color: vars.$background-color;
+  padding: vars.$spacing-medium;
+  border-radius: vars.$border-radius;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }

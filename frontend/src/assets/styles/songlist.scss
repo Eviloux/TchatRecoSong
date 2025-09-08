@@ -1,25 +1,14 @@
 // src/assets/styles/songlist.scss
 
-@use 'variables' as *;
-@use 'mixins' as *;
+@use 'variables' as vars;
+@use 'mixins' as mixins;
 
-.song-list {
-  padding: $spacing-medium;
+.song-card {
+  @include mixins.card-style;
+  margin-bottom: vars.$spacing-medium;
+}
 
-  .song-item {
-    @include card-style;
-    margin-bottom: $spacing-small;
-    color: $primary-text-color;
-
-    h3 {
-      margin: 0;
-      font-size: 1.2rem;
-    }
-
-    p {
-      margin: 0;
-      font-size: 0.9rem;
-      color: $text-color;
-    }
-  }
+.song-title {
+  font-weight: bold;
+  color: vars.$primary-color;
 }

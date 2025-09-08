@@ -1,20 +1,13 @@
 // src/assets/styles/_variables.scss
 
-// Couleurs
+$font-family: 'Arial, sans-serif';
 $primary-color: #1abc9c;
-$secondary-color: #2ecc71;
-$primary-text-color: #333;
-$text-color: #222;
+$secondary-color: #3498db;
 $background-color: #f5f5f5;
+$text-color: #333;
 
-// Espacements
-$spacing-small: 5px;
 $spacing: 10px;
 $spacing-medium: 20px;
-$spacing-large: 40px;
+$spacing-large: 30px;
 
-// Bordures
 $border-radius: 5px;
-
-// Autres
-$font-family: 'Helvetica', sans-serif;

@@ -1,22 +1,14 @@
 // src/assets/styles/adminpanel.scss
 
-@use 'variables' as *;
-@use 'mixins' as *;
+@use 'variables' as vars;
+@use 'mixins' as mixins;
 
-.admin-panel {
-  padding: $spacing-large;
+.admin-container {
+  padding: vars.$spacing-large;
+  background-color: vars.$background-color;
+}
 
-  h2 {
-    color: $primary-color;
-    margin-bottom: $spacing-medium;
-  }
-
-  .input-group {
-    margin-bottom: $spacing-medium;
-
-    input, select, textarea {
-      @include input-style;
-      width: 100%;
-    }
-  }
+.admin-input {
+  @include mixins.input-style;
+  margin-bottom: vars.$spacing-medium;
 }

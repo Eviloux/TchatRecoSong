@@ -1,7 +1,5 @@
-import { createApp } from 'vue'
-import App from './App.vue'
+import { createApp } from 'vue';
+import App from './App.vue';
+import './assets/styles/app.scss';
 
-// Import SCSS global
-import './assets/styles/app.scss'
-
-createApp(App).mount('#app')
+createApp(App).mount('#app');
