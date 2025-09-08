@@ -1,9 +1,20 @@
-$primary-color: #4caf50;
-$secondary-color: #2196f3;
-$font-family: Arial, sans-serif;
-$border-radius: 5px;
-$spacing: 10px; slot$primary-color: #1abc9c;
-$primary-text-color: #333;
-$background-color: #f5f5f5;
-$text-color: #222;
+// src/assets/styles/_variables.scss
 
+// Couleurs
+$primary-color: #1abc9c;
+$secondary-color: #2ecc71;
+$primary-text-color: #333;
+$text-color: #222;
+$background-color: #f5f5f5;
+
+// Espacements
+$spacing-small: 5px;
+$spacing: 10px;
+$spacing-medium: 20px;
+$spacing-large: 40px;
+
+// Bordures
+$border-radius: 5px;
+
+// Autres
+$font-family: 'Helvetica', sans-serif;

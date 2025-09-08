@@ -1,7 +1,6 @@
 // Import des variables et mixins
-@import 'variables';
-@import 'mixins';
-
+@use 'mixins' as *;
+@use 'variables' as *;-
 // Reset et styles de base
 * {
   margin: 0;

@@ -1,13 +1,23 @@
+// src/assets/styles/_mixins.scss
+
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 @mixin input-style {
   padding: $spacing;
-  border: 1px solid #ccc;
   border-radius: $border-radius;
+  border: 1px solid $primary-color;
   font-family: $font-family;
+  font-size: 1rem;
+  color: $text-color;
 }
 
 @mixin card-style {
-  background: #fff;
-  padding: $spacing;
+  background-color: $background-color;
+  padding: $spacing-medium;
   border-radius: $border-radius;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
