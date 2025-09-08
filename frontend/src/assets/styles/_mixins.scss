@@ -1,0 +1,10 @@
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin input-style {
+  padding: 8px;
+  font-size: 14px;
+}

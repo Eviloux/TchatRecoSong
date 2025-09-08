@@ -1,0 +1,21 @@
+@import './variables.scss';
+@import './mixins.scss';   // <-- Ajoute cette ligne
+.songlist-container {
+  margin-bottom: 30px;
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    margin-bottom: $component-gap;
+
+    img {
+      margin-right: 10px;
+      border-radius: 5px;
+    }
+  }
+}

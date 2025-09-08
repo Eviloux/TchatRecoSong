@@ -1,0 +1,14 @@
+@import './variables.scss';
+@import './mixins.scss';   // <-- Ajoute cette ligne
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: $container-padding;
+  font-family: $font-family;
+  color: $text-color;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+}

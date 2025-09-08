@@ -1,0 +1,31 @@
+@import './variables.scss';
+@import './mixins.scss';   // <-- Ajoute cette ligne
+
+.adminpanel-container {
+  border-top: 1px solid $border-color;
+  padding-top: $container-padding;
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: $component-gap;
+
+    input {
+      @include input-style;  // Maintenant reconnu
+    }
+
+    button {
+      padding: 8px;
+      background-color: $primary-color;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 4px;
+
+      &:hover {
+        background-color: $primary-hover;
+      }
+    }
+  }
+}
