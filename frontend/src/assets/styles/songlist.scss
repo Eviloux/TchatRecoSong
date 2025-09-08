@@ -1,21 +1,60 @@
-@import './variables.scss';
-@import './mixins.scss';   // <-- Ajoute cette ligne
-.songlist-container {
-  margin-bottom: 30px;
+@import 'mixins';
+@import 'variables';
 
-  ul {
-    list-style: none;
-    padding: 0;
+.song-list {
+  .empty-message {
+    text-align: center;
+    font-style: italic;
+    color: $secondary-color;
+    margin-top: 2rem;
   }
 
-  li {
-    display: flex;
-    align-items: center;
-    margin-bottom: $component-gap;
+  .songs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
 
-    img {
-      margin-right: 10px;
-      border-radius: 5px;
+  .song-card {
+    @include card-style;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    .song-thumbnail {
+      width: 100%;
+      max-width: 200px;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .song-info {
+      h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+      }
+
+      p {
+        margin-bottom: 0.25rem;
+      }
+
+      a {
+        @include input-style;
+        display: inline-block;
+        text-decoration: none;
+        color: $primary-text-color;
+        background-color: $primary-color;
+        margin-top: 0.5rem;
+        border-radius: 4px;
+        padding: 0.4rem 0.8rem;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background-color: darken($primary-color, 10%);
+        }
+      }
     }
   }
 }

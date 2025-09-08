@@ -1,30 +1,48 @@
-@import './variables.scss';
-@import './mixins.scss';   // <-- Ajoute cette ligne
+@import 'mixins';
+@import 'variables';
 
-.adminpanel-container {
-  border-top: 1px solid $border-color;
-  padding-top: $container-padding;
+.admin-panel {
+  h2 {
+    margin-bottom: 1rem;
+    color: $primary-color;
+  }
+
+  .ban-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+
+    .ban-card {
+      @include card-style;
+      display: flex;
+      flex-direction: column;
+
+      p {
+        margin: 0.25rem 0;
+      }
+    }
+  }
 
   form {
     display: flex;
     flex-direction: column;
-    gap: $component-gap;
+    gap: 0.5rem;
 
     input {
-      @include input-style;  // Maintenant reconnu
+      @include input-style;
     }
 
     button {
-      padding: 8px;
+      @include input-style;
       background-color: $primary-color;
-      color: white;
+      color: $primary-text-color;
       border: none;
       cursor: pointer;
-      font-size: 14px;
-      border-radius: 4px;
+      transition: background-color 0.3s;
 
       &:hover {
-        background-color: $primary-hover;
+        background-color: darken($primary-color, 10%);
       }
     }
   }

@@ -1,10 +1,13 @@
-@mixin flex-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+@mixin input-style {
+  padding: $spacing;
+  border: 1px solid #ccc;
+  border-radius: $border-radius;
+  font-family: $font-family;
 }
 
-@mixin input-style {
-  padding: 8px;
-  font-size: 14px;
+@mixin card-style {
+  background: #fff;
+  padding: $spacing;
+  border-radius: $border-radius;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }

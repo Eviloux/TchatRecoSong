@@ -4,21 +4,19 @@ from app.config import CORS_ORIGINS
 from app.api.routes import songs, ban_rules
 from app.database.connection import Base, engine
 
-# Crée la DB si elle n'existe pas
+# Créer la DB si elle n’existe pas
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Twitch Song Recommender")
 
-# Ajout du middleware CORS
+# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
-
-print("CORS_ORIGINS:", CORS_ORIGINS)  # Debug → tu dois voir la liste au démarrage
 
 # Routes
 app.include_router(songs.router, prefix="/songs", tags=["Songs"])

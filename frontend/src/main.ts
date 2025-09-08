@@ -1,5 +1,7 @@
 import { createApp } from 'vue'
-import App from './App.vue'          // Assure-toi que le chemin est correct
-import './assets/styles/app.scss'    // Import du SCSS global
+import App from './App.vue'
 
-createApp(App).mount('#app')        // Monte l'app sur le div#app
+// Import global SCSS
+import './assets/styles/app.scss'
+
+createApp(App).mount('#app')

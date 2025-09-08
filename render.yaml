@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: TchatRecoSong
+    env: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: "postgres://USER:PASSWORD@HOST:PORT/DBNAME"  # <-- remplace par ton URL exacte
+      - key: CORS_ORIGINS
+        value: "https://tchatrecosong-front.onrender.com
+
+  - type: web
+    name: TchatRecoSong-front
+    env: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: VITE_API_URL
+        value: "https://tchatrecosong.onrender.com"
