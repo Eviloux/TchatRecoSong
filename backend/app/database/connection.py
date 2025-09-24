@@ -6,7 +6,13 @@ from dotenv import load_dotenv
 # Charger .env en local
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DEFAULT_NEON_URL = (
+    "postgresql://neondb_owner:npg_ljrtUWJ9o7Cs@"
+    "ep-plain-leaf-ag9ynkn2-pooler.c-2.eu-central-1.aws.neon.tech/"
+    "neondb?sslmode=require&channel_binding=require"
+)
+
+DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_NEON_URL)
 if not DATABASE_URL:
     raise ValueError("❌ DATABASE_URL non défini.")
 
