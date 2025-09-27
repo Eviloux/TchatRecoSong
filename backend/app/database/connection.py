@@ -13,15 +13,9 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_NEON_URL = (
-    "postgresql://neondb_owner:npg_ljrtUWJ9o7Cs@"
-    "ep-plain-leaf-ag9ynkn2-pooler.c-2.eu-central-1.aws.neon.tech/"
-    "neondb?sslmode=require&channel_binding=require"
-)
-
-
 def _iter_env_candidates() -> Iterable[str]:
     keys = (
+        "NEON_DATABASE_URL",
         "DATABASE_INTERNAL_URL",
         "DATABASE_URL",
         "DATABASE_EXTERNAL_URL",
@@ -134,9 +128,11 @@ def _determine_database_url() -> str:
         logger.info("DATABASE_URL assemblée à partir des variables individuelles.")
         return assembled
 
-    logger.warning(
-        "Aucune configuration base de données explicite trouvée, utilisation du fallback Neon.")
-    return DEFAULT_NEON_URL
+    raise RuntimeError(
+        "Aucune variable de connexion PostgreSQL n'est définie. "
+        "Renseigne `NEON_DATABASE_URL`, `DATABASE_URL` ou les champs `DATABASE_*`/`POSTGRES_*` "
+        "fournis par Neon ou ton hébergeur."
+    )
 
 
 DATABASE_URL = _determine_database_url()

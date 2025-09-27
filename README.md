@@ -15,13 +15,11 @@ bannissement) restent réservés aux comptes Google/Twitch autorisés.
 
 ## Base de données Neon / Render
 
-Le backend FastAPI est prêt à se connecter à l'instance Neon fournie par défaut. Si aucune variable d'environnement `DATABASE_URL` n'est définie, la connexion utilisera automatiquement l'URL suivante :
+Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration GitHub depuis le dashboard Neon, une variable `NEON_DATABASE_URL` (ou `DATABASE_URL`) est ajoutée aux workflows GitHub Actions et peut être récupérée depuis l'onglet **Connect**. Copie cette URL et colle-la dans les variables d'environnement de Render (ou dans ton `.env` local). Elle contient déjà le `sslmode=require` nécessaire.
 
-```
-postgresql://neondb_owner:npg_ljrtUWJ9o7Cs@ep-plain-leaf-ag9ynkn2-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-```
+> 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Renseigne-les dans `DATABASE_HOST`, `DATABASE_USER`, etc. comme indiqué dans `backend/.env`.
 
-Pour initialiser les tables (`songs`, `ban_rules`) directement dans Neon, importez le fichier SQL `backend/app/database/neon_schema.sql` via l'outil SQL du tableau de bord Neon ou avec `psql`.
+Pour initialiser les tables (`songs`, `ban_rules`) dans Neon, exécute le script SQL `backend/app/database/neon_schema.sql` via l'interface SQL Neon ou avec `psql`.
 
 ### Utilisation avec Render PostgreSQL
 
