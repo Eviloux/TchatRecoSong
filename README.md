@@ -7,7 +7,7 @@ Twitch.
 
 Twitch interdit d'envoyer des liens cliquables directement dans le tchat. Le bot
 `!reco` doit donc se contenter d'afficher l'URL publique de la page "utilisateur"
-hébergée par ce dépôt (ex. `https://wizbit.example/reco`). Les viewers y collent
+hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com`). Les viewers y collent
 leur lien YouTube ou Spotify ; le backend va chercher les métadonnées
 correspondantes via `POST /public/submissions/` et enregistre la recommandation
 en base. Les écrans d'administration (liste des chansons, règles de
