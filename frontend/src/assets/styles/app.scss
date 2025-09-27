@@ -118,6 +118,7 @@ body {
     @include card-style;
     display: grid;
     gap: $spacing-medium;
+
     justify-items: center;
 
     button {
@@ -138,11 +139,14 @@ body {
       > div {
         width: 100% !important;
       }
+
     }
 
     .twitch-login {
       display: inline-flex;
+
       justify-content: center;
+
       align-items: center;
       gap: $spacing-small;
       padding: $spacing-small $spacing-large;

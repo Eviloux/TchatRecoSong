@@ -65,6 +65,7 @@ dans ces fichiers, mais voici un rappel synthétique :
 > les clients OAuth et les listes d'administrateurs). Un mot de passe erroné côté Neon ou Render
 > provoquera un arrêt immédiat du backend.
 
+
 ### URLs frontend prêtes à l'emploi
 
 - Portail public (viewers) : `https://tchatrecosong-front.onrender.com/submit`
