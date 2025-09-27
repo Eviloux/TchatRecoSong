@@ -1,17 +1,47 @@
 import logging
 import os
-from typing import Iterable, Optional
+
+from typing import Dict, Iterable, Optional
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
-from sqlalchemy.exc import ArgumentError
+from sqlalchemy.exc import ArgumentError, OperationalError
+
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Charger .env en local
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+def _mask_password(url_obj: URL) -> URL:
+    """Retourne une URL dont le mot de passe est masqué pour les logs."""
+
+    if not url_obj.password:
+        return url_obj
+
+    return url_obj.set(password="***")
+
+
+def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
+    """Expose les principales infos de connexion sans mot de passe."""
+
+    try:
+        url_obj = make_url(url_str)
+    except ArgumentError:
+        return {"raw_url": url_str}
+
+    return {
+        "drivername": url_obj.drivername,
+        "username": url_obj.username,
+        "host": url_obj.host,
+        "port": str(url_obj.port) if url_obj.port is not None else None,
+        "database": url_obj.database,
+        "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
+    }
+
 
 def _iter_env_candidates() -> Iterable[str]:
     keys = (
@@ -123,6 +153,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     return str(url_obj)
 
 
+
 PLACEHOLDER_SETS = {
     "user": {"USER", "USERNAME"},
     "password": {"PASSWORD"},
@@ -224,7 +255,13 @@ def _determine_database_url() -> str:
 
 DATABASE_URL = _determine_database_url()
 
-engine = create_engine(DATABASE_URL)
+try:
+    _masked = _mask_password(make_url(DATABASE_URL))
+    logger.info("Connexion PostgreSQL configurée vers %s", _masked)
+except ArgumentError:  # pragma: no cover - log defensif
+    logger.info("Connexion PostgreSQL configurée via chaîne brute." )
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -235,3 +272,31 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def describe_active_database() -> Dict[str, Optional[str]]:
+    """Retourne les paramètres de connexion utilisés (mot de passe exclu)."""
+
+    return _connection_snapshot(DATABASE_URL)
+
+
+def check_connection() -> None:
+    """Déclenche une requête simple pour vérifier la connexion PostgreSQL."""
+
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except OperationalError as exc:
+        snapshot = describe_active_database()
+        logger.error(
+            "Échec de connexion à PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
+        )
+        raise
+
+
+if __name__ == "__main__":  # pragma: no cover - utilitaire manuel
+    try:
+        check_connection()
+    except OperationalError:
+        exit(1)
+    print("Connexion PostgreSQL OK")

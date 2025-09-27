@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-
 from app.config import (
     ADMIN_JWT_SECRET,
     ADMIN_TOKEN_TTL_MINUTES,
@@ -80,8 +79,6 @@ def authenticate_google(credential: str) -> tuple[str, str]:
 
 
     name = idinfo.get("name") or email or "Google Admin"
-
-
 
     subject = f"google:{idinfo.get('sub')}"
     token = issue_admin_token(subject=subject, name=name, provider="google")

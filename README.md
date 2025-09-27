@@ -13,6 +13,7 @@ soumission, portail `/submit`, redirection du routeur Vue, etc.). Si tu
 viens de fusionner ou de déployer, assure-toi que le service Render
 utilise bien cette révision.
 
+
 Twitch interdit d'envoyer des liens cliquables directement dans le tchat. Le bot
 `!reco` doit donc se contenter d'afficher l'URL publique de la page "utilisateur"
 hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com/submit`). Les viewers y collent
@@ -30,6 +31,18 @@ Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration G
 > 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Renseigne-les dans `DATABASE_HOST`, `DATABASE_USER`, etc. comme indiqué dans `backend/.env.example`.
 
 Pour initialiser les tables (`songs`, `ban_rules`) dans Neon, exécute le script SQL `backend/app/database/neon_schema.sql` via l'interface SQL Neon ou avec `psql`.
+
+### Vérifier ta configuration localement
+
+Avant de pousser sur Render, tu peux confirmer que les identifiants fournis sont valides en lançant :
+
+```bash
+cd backend
+python -m app.database.connection
+```
+
+La commande exécute un `SELECT 1` sur la base ciblée et affiche les paramètres (sans le mot de passe) dans les logs. En cas d'échec, le message d'erreur SQLAlchemy est accompagné de l'hôte, du port et de l'utilisateur effectivement utilisés — pratique pour détecter une faute de frappe ou un mot de passe expiré.
+
 
 ### Utilisation avec Render PostgreSQL
 
