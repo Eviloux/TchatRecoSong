@@ -9,6 +9,9 @@ def add_ban_rule(db: Session, rule: BanRuleCreate):
     db.refresh(db_rule)
     return db_rule
 
+def list_ban_rules(db: Session):
+    return db.query(BanRule).order_by(BanRule.id.desc()).all()
+
 def is_banned(db: Session, title: str, artist: str, link: str):
     query = db.query(BanRule)
     if title:
