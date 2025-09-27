@@ -1,11 +1,13 @@
 import logging
 import os
+
 from typing import Dict, Iterable, Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, OperationalError
+
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Charger .env en local
@@ -39,6 +41,7 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "database": url_obj.database,
         "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
     }
+
 
 def _iter_env_candidates() -> Iterable[str]:
     keys = (
@@ -148,6 +151,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
     return str(url_obj)
+
 
 
 PLACEHOLDER_SETS = {
