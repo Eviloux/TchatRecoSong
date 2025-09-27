@@ -10,6 +10,7 @@
     <div v-if="!token" class="login-options">
       <p>Connectez-vous avec un compte autorisé pour gérer les recommandations.</p>
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
+
       <button
         v-if="twitchClientId"
         type="button"
@@ -26,6 +27,7 @@
         </span>
         <span class="label">Login with Twitch</span>
       </button>
+
       <p class="login-hint">
         Configurez les variables <code>VITE_GOOGLE_CLIENT_ID</code> et <code>VITE_TWITCH_CLIENT_ID</code> si nécessaire.
       </p>
