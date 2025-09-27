@@ -19,7 +19,7 @@ Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration G
 
 > ⚠️ Neon affiche souvent un exemple sous la forme `psql 'postgresql://...'`. Ne recopie que la partie `postgresql://…` (sans le préfixe `psql` ni les quotes), sinon la connexion échouera.
 
-> 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Renseigne-les dans `DATABASE_HOST`, `DATABASE_USER`, etc. comme indiqué dans `backend/.env`.
+> 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Renseigne-les dans `DATABASE_HOST`, `DATABASE_USER`, etc. comme indiqué dans `backend/.env.example`.
 
 Pour initialiser les tables (`songs`, `ban_rules`) dans Neon, exécute le script SQL `backend/app/database/neon_schema.sql` via l'interface SQL Neon ou avec `psql`.
 
@@ -32,11 +32,10 @@ Pour initialiser les tables (`songs`, `ban_rules`) dans Neon, exécute le script
 
 ## Configuration authentification & frontend
 
-Deux fichiers `.env` distincts sont fournis dans les répertoires `backend/` et
-`frontend/`. Copie-colle leur contenu dans les sections "Environment" de tes
-services Render (ou dans tes variables locales) puis remplace chaque valeur par
-tes identifiants. Chaque variable est commentée directement dans les fichiers,
-mais voici un rappel synthétique :
+Chaque dossier (`backend/`, `frontend/`) contient un fichier `.env.example` à
+copier en `.env` puis à personnaliser avant de lancer l'application ou de créer
+les variables d'environnement sur Render. Chaque clé est commentée directement
+dans ces fichiers, mais voici un rappel synthétique :
 
 | Variable | À renseigner avec... |
 | --- | --- |
