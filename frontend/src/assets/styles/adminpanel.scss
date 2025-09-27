@@ -3,12 +3,55 @@
 @use 'variables' as vars;
 @use 'mixins' as mixins;
 
-.admin-container {
+.admin-panel {
+  margin-top: vars.$spacing-large;
   padding: vars.$spacing-large;
-  background-color: vars.$background-color;
-}
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: vars.$radius-medium;
 
-.admin-input {
-  @include mixins.input-style;
-  margin-bottom: vars.$spacing-medium;
+  h2 {
+    margin-top: 0;
+  }
+
+  .warning {
+    color: vars.$accent-color;
+  }
+
+  .ban-list {
+    list-style: none;
+    padding: 0;
+    margin: vars.$spacing-medium 0;
+
+    li {
+      padding: vars.$spacing-small 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .ban-empty {
+    color: vars.$muted-color;
+  }
+
+  .ban-form {
+    display: grid;
+    gap: vars.$spacing-medium;
+
+    .field {
+      display: flex;
+      flex-direction: column;
+
+      label {
+        margin-bottom: vars.$spacing-small;
+      }
+
+      input {
+        @include mixins.input-style;
+      }
+    }
+
+    button {
+      @include mixins.button-style;
+      justify-self: flex-start;
+    }
+  }
 }
