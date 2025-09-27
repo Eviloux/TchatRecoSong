@@ -44,5 +44,14 @@ précisément la valeur attendue. Voici un rappel synthétique :
 | `VITE_TWITCH_CLIENT_ID` | Identique à `TWITCH_CLIENT_ID` pour l'auth Twitch côté front. |
 | `VITE_PUBLIC_VIEWER_URL` | L'URL à afficher dans le tchat Twitch (page publique de soumission). |
 
+### URLs frontend prêtes à l'emploi
+
+- Portail public (viewers) : `https://tchatrecosong-front.onrender.com/`
+- Tableau de bord administrateur : `https://tchatrecosong-front.onrender.com/admin`
+
+> ℹ️ Le tableau de bord admin demande une authentification Google ou Twitch. Assure-toi
+> que l'adresse ou le login de chaque membre de l'équipe figure bien dans
+> `ALLOWED_GOOGLE_EMAILS` ou `ALLOWED_TWITCH_LOGINS`.
+
 > 💡 Les jetons générés par `POST /auth/google` et `POST /auth/twitch` sont valables
 > `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut). Ajustez cette valeur si besoin.
