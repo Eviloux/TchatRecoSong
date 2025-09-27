@@ -1,11 +1,13 @@
 import logging
 import os
+
 from typing import Dict, Iterable, Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, OperationalError
+
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Charger .env en local
@@ -41,6 +43,7 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
     }
 
 def _iter_env_candidates() -> Iterable[str]:
+
     # On privilégie les variables explicitement configurées (Neon, DATABASE_URL)
     # avant les URLs "internal" fournies par certains hébergeurs qui peuvent
     # pointer vers une ancienne instance (ex : Render conserve parfois une
@@ -52,6 +55,7 @@ def _iter_env_candidates() -> Iterable[str]:
         "POSTGRES_URL",
         "DATABASE_INTERNAL_URL",
         "POSTGRES_INTERNAL_URL",
+
     )
     for key in keys:
         value = os.getenv(key)
@@ -148,6 +152,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         query.pop("channel_binding", None)
         url_obj = url_obj.set(query=query)
 
+
     normalized_host = _normalize_host(url_obj.host)
     if normalized_host != url_obj.host:
         url_obj = url_obj.set(host=normalized_host)
@@ -160,7 +165,9 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     if sslmode:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
+
     return str(url_obj)
+
 
 
 PLACEHOLDER_SETS = {

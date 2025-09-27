@@ -13,6 +13,7 @@ soumission, portail `/submit`, redirection du routeur Vue, etc.). Si tu
 viens de fusionner ou de déployer, assure-toi que le service Render
 utilise bien cette révision.
 
+
 Twitch interdit d'envoyer des liens cliquables directement dans le tchat. Le bot
 `!reco` doit donc se contenter d'afficher l'URL publique de la page "utilisateur"
 hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com/submit`). Les viewers y collent
@@ -24,6 +25,7 @@ bannissement) restent réservés aux comptes Google/Twitch autorisés.
 ## Base de données Neon / Render
 
 Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration GitHub depuis le dashboard Neon, une variable `NEON_DATABASE_URL` (ou `DATABASE_URL`) est ajoutée aux workflows GitHub Actions et peut être récupérée depuis l'onglet **Connect**. Copie cette URL et colle-la dans les variables d'environnement de Render (ou dans ton `.env` local). Elle contient déjà le `sslmode=require` nécessaire.
+
 
 #### Mettre à jour la variable sur Render pas à pas
 
@@ -52,6 +54,7 @@ python -m app.database.connection
 ```
 
 La commande exécute un `SELECT 1` sur la base ciblée et affiche les paramètres (sans le mot de passe) dans les logs. En cas d'échec, le message d'erreur SQLAlchemy est accompagné de l'hôte, du port et de l'utilisateur effectivement utilisés — pratique pour détecter une faute de frappe ou un mot de passe expiré.
+
 
 ### Utilisation avec Render PostgreSQL
 
@@ -86,6 +89,7 @@ dans ces fichiers, mais voici un rappel synthétique :
 > remplace-les par tes propres identifiants (surtout `DATABASE_URL`, `ADMIN_JWT_SECRET`,
 > les clients OAuth et les listes d'administrateurs). Un mot de passe erroné côté Neon ou Render
 > provoquera un arrêt immédiat du backend.
+
 
 ### URLs frontend prêtes à l'emploi
 
