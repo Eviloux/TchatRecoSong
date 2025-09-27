@@ -119,13 +119,34 @@ body {
     display: grid;
     gap: $spacing-medium;
 
+    justify-items: center;
+
     button {
       @include button-style;
-      width: fit-content;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    #google-login {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      max-width: 320px;
+
+      > div {
+        width: 100% !important;
+      }
+
     }
 
     .twitch-login {
       display: inline-flex;
+
+      justify-content: center;
+
       align-items: center;
       gap: $spacing-small;
       padding: $spacing-small $spacing-large;

@@ -5,8 +5,7 @@ import httpx
 from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
+
 
 from app.config import (
     ADMIN_JWT_SECRET,
@@ -59,20 +58,30 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     if not GOOGLE_CLIENT_ID:
         raise AdminAuthError("GOOGLE_CLIENT_ID non configuré")
 
-    try:
-        idinfo = id_token.verify_oauth2_token(
-            credential,
-            google_requests.Request(),
-            GOOGLE_CLIENT_ID,
-        )
-    except ValueError as exc:  # pragma: no cover - depends on external service
-        raise AdminAuthError("Token Google invalide") from exc
+
+    token_info_url = "https://oauth2.googleapis.com/tokeninfo"
+    params = {"id_token": credential}
+    with httpx.Client(timeout=5.0) as client:
+        response = client.get(token_info_url, params=params)
+
+    if response.status_code != 200:  # pragma: no cover - depends on external service
+        raise AdminAuthError("Token Google invalide")
+
+    idinfo = response.json()
+
+    audience = idinfo.get("aud")
+    if audience != GOOGLE_CLIENT_ID:
+        raise AdminAuthError("Client Google non autorisé")
+
 
     email = idinfo.get("email")
     if ALLOWED_GOOGLE_EMAILS and email not in ALLOWED_GOOGLE_EMAILS:
         raise AdminAuthError("Adresse non autorisée", status.HTTP_403_FORBIDDEN)
 
-    name = idinfo.get("name", email)
+
+    name = idinfo.get("name") or email or "Google Admin"
+
+
     subject = f"google:{idinfo.get('sub')}"
     token = issue_admin_token(subject=subject, name=name, provider="google")
     return token, name
