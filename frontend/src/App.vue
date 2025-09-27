@@ -3,7 +3,7 @@
     <header class="app-header">
       <h1 class="app-title">Tchat Reco Song</h1>
       <nav class="app-nav">
-        <RouterLink to="/">Soumettre</RouterLink>
+        <RouterLink to="/submit">Soumettre</RouterLink>
         <RouterLink to="/admin">Admin</RouterLink>
       </nav>
     </header>

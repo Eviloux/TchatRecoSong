@@ -7,7 +7,7 @@ Twitch.
 
 Twitch interdit d'envoyer des liens cliquables directement dans le tchat. Le bot
 `!reco` doit donc se contenter d'afficher l'URL publique de la page "utilisateur"
-hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com`). Les viewers y collent
+hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com/submit`). Les viewers y collent
 leur lien YouTube ou Spotify ; le backend va chercher les métadonnées
 correspondantes via `POST /public/submissions/` et enregistre la recommandation
 en base. Les écrans d'administration (liste des chansons, règles de
@@ -51,11 +51,11 @@ mais voici un rappel synthétique :
 | `VITE_API_URL` | L'URL publique du backend (ex : `https://tchat-reco-backend.onrender.com`). |
 | `VITE_GOOGLE_CLIENT_ID` | Identique à `GOOGLE_CLIENT_ID` pour initialiser le bouton côté front. |
 | `VITE_TWITCH_CLIENT_ID` | Identique à `TWITCH_CLIENT_ID` pour l'auth Twitch côté front. |
-| `VITE_PUBLIC_VIEWER_URL` | L'URL à afficher dans le tchat Twitch (page publique de soumission). |
+| `VITE_PUBLIC_VIEWER_URL` | L'URL à afficher dans le tchat Twitch (page publique de soumission, ex. `/submit`). |
 
 ### URLs frontend prêtes à l'emploi
 
-- Portail public (viewers) : `https://tchatrecosong-front.onrender.com/`
+- Portail public (viewers) : `https://tchatrecosong-front.onrender.com/submit`
 - Page de connexion administrateur : `https://tchatrecosong-front.onrender.com/admin`
 - Tableau de bord administrateur (après authentification) : `https://tchatrecosong-front.onrender.com/admin`
 
@@ -80,7 +80,7 @@ doivent rester secrètes et spécifiques à ton compte. Voici comment les créer
 
 2. **Identifiants Twitch (`TWITCH_CLIENT_ID` / `VITE_TWITCH_CLIENT_ID`)**
    - Va sur [dev.twitch.tv/console](https://dev.twitch.tv/console/apps).
-   - Crée une application, choisis "Web" comme type et renseigne l'URL de redirection `https://tchatrecosong-front.onrender.com/auth/twitch/callback` (et `http://localhost:5173/auth/twitch/callback` pour le local).
+   - Crée une application, choisis "Web" comme type et renseigne l'URL de redirection `https://tchatrecosong-front.onrender.com/admin` (et `http://localhost:5173/admin` pour le local).
    - Une fois l'appli créée, récupère le `Client ID` (renseigne-le côté backend et frontend) et garde le `Client Secret` dans la console Twitch : il n'est pas nécessaire dans la configuration actuelle qui se contente de valider des tokens d'accès existants.
 
 3. **APIs YouTube & Spotify**

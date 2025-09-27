@@ -38,7 +38,8 @@ type SongListInstance = {
 };
 
 const API_URL = import.meta.env.VITE_API_URL;
-const viewerUrl = import.meta.env.VITE_PUBLIC_VIEWER_URL || window.location.origin;
+const viewerUrl =
+  import.meta.env.VITE_PUBLIC_VIEWER_URL || `${window.location.origin}/submit`;
 
 const link = ref('');
 const feedback = ref('');
