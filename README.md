@@ -25,6 +25,15 @@ bannissement) restent réservés aux comptes Google/Twitch autorisés.
 
 Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration GitHub depuis le dashboard Neon, une variable `NEON_DATABASE_URL` (ou `DATABASE_URL`) est ajoutée aux workflows GitHub Actions et peut être récupérée depuis l'onglet **Connect**. Copie cette URL et colle-la dans les variables d'environnement de Render (ou dans ton `.env` local). Elle contient déjà le `sslmode=require` nécessaire.
 
+#### Mettre à jour la variable sur Render pas à pas
+
+1. Ouvre ton service **Backend** sur Render.
+2. Va dans l'onglet **Environment** puis clique sur **Add Environment Variable** (ou modifie la clé existante).
+3. Renseigne `DATABASE_URL` comme nom, et colle l'URL Neon nettoyée (voir remarques ci-dessous) comme valeur.
+4. Clique sur **Save Changes**, puis déclenche un redéploiement via **Manual Deploy > Deploy latest commit** pour que la nouvelle URL soit prise en compte.
+
+> 🎯 Si tu utilises aussi `DATABASE_INTERNAL_URL` ou `POSTGRES_INTERNAL_URL`, mets-les à jour de la même façon : Render prendra automatiquement la bonne clé au démarrage.
+
 > ❌ Neon affiche parfois un suffixe `&channel_binding=require`. Supprime-le : libpq/psycopg2 utilisé sur Render ne gère pas cette option et échouera avec une erreur d'authentification. Garde simplement `?sslmode=require` dans l'URL finale.
 
 > ⚠️ Neon affiche souvent un exemple sous la forme `psql 'postgresql://...'`. Ne recopie que la partie `postgresql://…` (sans le préfixe `psql` ni les quotes), sinon la connexion échouera.
