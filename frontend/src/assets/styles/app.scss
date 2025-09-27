@@ -7,8 +7,173 @@
 
 body {
   font-family: $font-family;
-  background-color: $background-color;
+  background: radial-gradient(circle at top, rgba(30, 64, 175, 0.35), transparent),
+    $background-color;
   color: $text-color;
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  padding: $spacing-large;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.7);
+
+  .app-title {
+    margin: 0;
+  }
+
+  .app-nav {
+    display: flex;
+    gap: $spacing-medium;
+
+    a {
+      color: $text-color;
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+
+      &.router-link-active::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, $primary-color, $secondary-color);
+      }
+    }
+  }
+}
+
+.app-main {
+  flex: 1;
+  padding: $spacing-large;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.home-view {
+  display: grid;
+  gap: $spacing-large;
+
+  .hero {
+    @include card-style;
+    display: grid;
+    gap: $spacing;
+
+    .hero-title {
+      font-size: clamp(1.6rem, 2.2vw, 2.4rem);
+      margin: 0;
+    }
+
+    .hero-subtitle {
+      color: $muted-color;
+      font-size: 1rem;
+    }
+  }
+
+  .submission-form {
+    @include card-style;
+    display: grid;
+    gap: $spacing;
+
+    input {
+      @include input-style;
+    }
+
+    button {
+      @include button-style;
+      justify-self: flex-start;
+    }
+  }
+
+  .feedback {
+    margin: 0 0 $spacing 0;
+    font-weight: 600;
+
+    &.error {
+      color: $accent-color;
+    }
+
+    &.success {
+      color: $primary-color;
+    }
+  }
+}
+
+.admin-view {
+  .login-options {
+    @include card-style;
+    display: grid;
+    gap: $spacing-medium;
+
+    button {
+      @include button-style;
+      width: fit-content;
+    }
+
+    .twitch-login {
+      display: inline-flex;
+      align-items: center;
+      gap: $spacing-small;
+      padding: $spacing-small $spacing-large;
+      background: $twitch-color;
+      border-radius: $radius-medium;
+      box-shadow: 0 6px 16px rgba($twitch-color, 0.35);
+      font-weight: 600;
+      color: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba($twitch-color, 0.4);
+      }
+
+      &:focus-visible {
+        outline: 3px solid #b896ff;
+        outline-offset: 3px;
+      }
+
+      .icon {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      .label {
+        white-space: nowrap;
+      }
+    }
+
+    .login-hint {
+      color: $muted-color;
+    }
+  }
+
+  .admin-content {
+    display: grid;
+    gap: $spacing-large;
+  }
+
+  .logout {
+    @include button-style;
+    justify-self: flex-start;
+  }
 }
