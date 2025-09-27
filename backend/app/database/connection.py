@@ -1,11 +1,14 @@
 import logging
 import os
+
 from typing import Dict, Optional
+
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, OperationalError
+
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Charger .env en local
@@ -39,6 +42,7 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "database": url_obj.database,
         "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
     }
+
 
 def _normalize_host(host: Optional[str]) -> Optional[str]:
     if not host:
@@ -129,6 +133,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         query.pop("channel_binding", None)
         url_obj = url_obj.set(query=query)
 
+
     normalized_host = _normalize_host(url_obj.host)
     if normalized_host != url_obj.host:
         url_obj = url_obj.set(host=normalized_host)
@@ -142,6 +147,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
     return str(url_obj)
+
 
 
 PLACEHOLDER_SETS = {
@@ -226,6 +232,7 @@ def _build_url_from_parts() -> Optional[str]:
 
 
 def _determine_database_url() -> str:
+
     raw_database_url = os.getenv("DATABASE_URL")
     if raw_database_url:
         normalized = _normalize_url(raw_database_url)
@@ -236,14 +243,17 @@ def _determine_database_url() -> str:
             "depuis Neon/Render (sans le préfixe `psql` ni les quotes)."
         )
 
+
     assembled = _build_url_from_parts()
     if assembled:
         logger.info("DATABASE_URL assemblée à partir des variables individuelles.")
         return assembled
 
     raise RuntimeError(
+
         "La variable `DATABASE_URL` n'est pas définie. Renseigne-la avec l'URL fournie "
         "par Neon ou Render dans les variables d'environnement du service."
+
     )
 
 
