@@ -47,7 +47,8 @@ précisément la valeur attendue. Voici un rappel synthétique :
 ### URLs frontend prêtes à l'emploi
 
 - Portail public (viewers) : `https://tchatrecosong-front.onrender.com/`
-- Tableau de bord administrateur : `https://tchatrecosong-front.onrender.com/admin`
+- Page de connexion administrateur : `https://tchatrecosong-front.onrender.com/admin`
+- Tableau de bord administrateur (après authentification) : `https://tchatrecosong-front.onrender.com/admin`
 
 > ℹ️ Le tableau de bord admin demande une authentification Google ou Twitch. Assure-toi
 > que l'adresse ou le login de chaque membre de l'équipe figure bien dans
@@ -55,3 +56,24 @@ précisément la valeur attendue. Voici un rappel synthétique :
 
 > 💡 Les jetons générés par `POST /auth/google` et `POST /auth/twitch` sont valables
 > `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut). Ajustez cette valeur si besoin.
+
+### Générer les identifiants et secrets OAuth
+
+Impossible de te fournir des jetons ou des clients OAuth déjà valides — ces valeurs
+doivent rester secrètes et spécifiques à ton compte. Voici comment les créer :
+
+1. **Identifiants Google (`GOOGLE_CLIENT_ID` / `VITE_GOOGLE_CLIENT_ID`)**
+   - Ouvre [console.cloud.google.com](https://console.cloud.google.com/).
+   - Crée un projet (ou utilise-en un existant) puis active l'API "Google Identity Services".
+   - Dans "Identifiants", crée un "ID client OAuth 2.0" de type Application Web.
+   - Ajoute comme origines autorisées l'URL de ton frontend (Render) et `http://localhost:5173` pour les tests.
+   - Copie l'ID client (pas besoin de secret côté frontend) et reporte-le dans `.env`.
+
+2. **Identifiants Twitch (`TWITCH_CLIENT_ID` / `VITE_TWITCH_CLIENT_ID`)**
+   - Va sur [dev.twitch.tv/console](https://dev.twitch.tv/console/apps).
+   - Crée une application, choisis "Web" comme type et renseigne l'URL de redirection `https://tchatrecosong-front.onrender.com/auth/twitch/callback` (et `http://localhost:5173/auth/twitch/callback` pour le local).
+   - Une fois l'appli créée, récupère le `Client ID` (renseigne-le côté backend et frontend) et garde le `Client Secret` dans la console Twitch : il n'est pas nécessaire dans la configuration actuelle qui se contente de valider des tokens d'accès existants.
+
+3. **APIs YouTube & Spotify**
+   - Le projet s'appuie sur les endpoints publics oEmbed de YouTube et Spotify, qui ne nécessitent ni clé API ni jeton d'accès supplémentaires.
+   - Aucun champ `.env` n'est donc à renseigner pour ces services. Si tu souhaites étendre les fonctionnalités (ex : recherche), crée des clés via la Google Cloud Console ou le Dashboard Spotify Developer et ajuste le code en conséquence.
