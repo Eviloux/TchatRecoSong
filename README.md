@@ -60,6 +60,12 @@ dans ces fichiers, mais voici un rappel synthétique :
 | `VITE_TWITCH_CLIENT_ID` | Identique à `TWITCH_CLIENT_ID` pour l'auth Twitch côté front. |
 | `VITE_PUBLIC_VIEWER_URL` | L'URL à afficher dans le tchat Twitch (page publique de soumission, ex. `/submit`). |
 
+> ⚠️ Les valeurs présentes dans les fichiers `.env` versionnés sont **des exemples**. Sur Render,
+> remplace-les par tes propres identifiants (surtout `DATABASE_URL`, `ADMIN_JWT_SECRET`,
+> les clients OAuth et les listes d'administrateurs). Un mot de passe erroné côté Neon ou Render
+> provoquera un arrêt immédiat du backend.
+
+
 ### URLs frontend prêtes à l'emploi
 
 - Portail public (viewers) : `https://tchatrecosong-front.onrender.com/submit`

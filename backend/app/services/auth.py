@@ -82,6 +82,7 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     name = idinfo.get("name") or email or "Google Admin"
 
 
+
     subject = f"google:{idinfo.get('sub')}"
     token = issue_admin_token(subject=subject, name=name, provider="google")
     return token, name
