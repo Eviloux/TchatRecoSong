@@ -25,19 +25,24 @@ Pour initialiser les tables (`songs`, `ban_rules`) directement dans Neon, import
 
 ## Configuration authentification & frontend
 
-Les variables suivantes pilotent les accès administrateur et le portail frontend :
+Le dépôt embarque un fichier `.env` prêt à être copié/collé dans l'interface
+"Environment" de Render. Chaque variable y est commentée pour expliquer
+précisément la valeur attendue. Voici un rappel synthétique :
 
-| Variable | Description |
+| Variable | À renseigner avec... |
 | --- | --- |
-| `ADMIN_JWT_SECRET` | Secret HMAC pour signer les jetons admin (obligatoire en production). |
-| `ALLOWED_GOOGLE_EMAILS` | Liste (séparée par des virgules) des adresses Google autorisées. |
-| `ALLOWED_TWITCH_LOGINS` | Liste des logins Twitch autorisés. |
-| `GOOGLE_CLIENT_ID` | Client ID OAuth Google utilisé pour vérifier les `credential`. |
-| `TWITCH_CLIENT_ID` | Client ID OAuth Twitch pour valider les tokens. |
-| `VITE_API_URL` | URL du backend, consommée par le frontend (ex : `http://localhost:8000`). |
-| `VITE_GOOGLE_CLIENT_ID` | Même valeur que côté backend pour initialiser le bouton Google. |
-| `VITE_TWITCH_CLIENT_ID` | Identifiant Twitch utilisé pour l'implicit flow côté frontend. |
-| `VITE_PUBLIC_VIEWER_URL` | (Optionnel) URL absolue à afficher dans le tchat Twitch ; reprise dans l'interface publique. |
+| `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. |
+| `CORS_ORIGINS` | Les domaines autorisés à appeler l'API, séparés par des virgules. |
+| `ADMIN_JWT_SECRET` | Une chaîne secrète longue et aléatoire pour signer les JWT admin. |
+| `ADMIN_TOKEN_TTL_MINUTES` | Durée de validité des tokens admin (720 = 12 h). |
+| `GOOGLE_CLIENT_ID` | L'identifiant OAuth Google obtenu dans Google Cloud Console. |
+| `TWITCH_CLIENT_ID` | L'identifiant OAuth Twitch associé à votre application. |
+| `ALLOWED_GOOGLE_EMAILS` | Les emails Google autorisés à accéder à l'administration. |
+| `ALLOWED_TWITCH_LOGINS` | Les logins Twitch autorisés à accéder à l'administration. |
+| `VITE_API_URL` | L'URL publique du backend (ex : `https://tchat-reco-backend.onrender.com`). |
+| `VITE_GOOGLE_CLIENT_ID` | Identique à `GOOGLE_CLIENT_ID` pour initialiser le bouton côté front. |
+| `VITE_TWITCH_CLIENT_ID` | Identique à `TWITCH_CLIENT_ID` pour l'auth Twitch côté front. |
+| `VITE_PUBLIC_VIEWER_URL` | L'URL à afficher dans le tchat Twitch (page publique de soumission). |
 
 > 💡 Les jetons générés par `POST /auth/google` et `POST /auth/twitch` sont valables
-> `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut).
+> `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut). Ajustez cette valeur si besoin.
