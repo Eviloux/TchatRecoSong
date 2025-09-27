@@ -10,16 +10,32 @@
 
 @mixin input-style {
   padding: vars.$spacing;
-  border-radius: vars.$border-radius;
-  border: 1px solid vars.$primary-color;
+  border-radius: vars.$radius-medium;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   font-family: vars.$font-family;
   font-size: 1rem;
   color: vars.$text-color;
+  background: rgba(15, 23, 42, 0.6);
 }
 
 @mixin card-style {
-  background-color: vars.$background-color;
+  background: rgba(15, 23, 42, 0.85);
   padding: vars.$spacing-medium;
-  border-radius: vars.$border-radius;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  border-radius: vars.$radius-medium;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.4);
+}
+
+@mixin button-style {
+  padding: vars.$spacing-small vars.$spacing-medium;
+  border-radius: vars.$radius-medium;
+  border: none;
+  background: linear-gradient(135deg, vars.$primary-color, vars.$secondary-color);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 }

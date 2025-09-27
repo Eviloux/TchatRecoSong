@@ -1,11 +1,18 @@
 <template>
   <div id="app">
-    <SongList />
-    <AdminPanel />
+    <header class="app-header">
+      <h1 class="app-title">Tchat Reco Song</h1>
+      <nav class="app-nav">
+        <RouterLink to="/submit">Soumettre</RouterLink>
+        <RouterLink to="/admin">Admin</RouterLink>
+      </nav>
+    </header>
+    <main class="app-main">
+      <RouterView />
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import SongList from './components/SongList.vue';
-import AdminPanel from './components/AdminPanel.vue';
+import { RouterLink, RouterView } from 'vue-router';
 </script>
