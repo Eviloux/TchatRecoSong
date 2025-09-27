@@ -51,8 +51,21 @@ def _normalize_host(host: Optional[str]) -> Optional[str]:
     return host
 
 
+def _strip_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
 def _normalize_url(raw_url: str) -> Optional[str]:
     url = raw_url.strip()
+
+    if url.lower().startswith("psql "):
+        remainder = url[5:].strip()
+        remainder = _strip_quotes(remainder)
+        url = remainder
+
+    url = _strip_quotes(url)
     if not url:
         return None
 
