@@ -43,13 +43,19 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
     }
 
 def _iter_env_candidates() -> Iterable[str]:
+
+    # On privilégie les variables explicitement configurées (Neon, DATABASE_URL)
+    # avant les URLs "internal" fournies par certains hébergeurs qui peuvent
+    # pointer vers une ancienne instance (ex : Render conserve parfois une
+    # `DATABASE_INTERNAL_URL` obsolète).
     keys = (
         "NEON_DATABASE_URL",
-        "DATABASE_INTERNAL_URL",
         "DATABASE_URL",
         "DATABASE_EXTERNAL_URL",
-        "POSTGRES_INTERNAL_URL",
         "POSTGRES_URL",
+        "DATABASE_INTERNAL_URL",
+        "POSTGRES_INTERNAL_URL",
+
     )
     for key in keys:
         value = os.getenv(key)
@@ -161,6 +167,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
 
 
     return str(url_obj)
+
 
 
 PLACEHOLDER_SETS = {
