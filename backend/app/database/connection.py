@@ -42,7 +42,6 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
     }
 
-
 def _iter_env_candidates() -> Iterable[str]:
     keys = (
         "NEON_DATABASE_URL",
@@ -138,6 +137,16 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         )
         return None
 
+    if url_obj.query.get("channel_binding") == "require":
+        logger.warning(
+            "Le paramètre channel_binding=require a été retiré de l'URL car il n'est "
+            "pas pris en charge par libpq sur Render. Utilise `sslmode=require` seul."
+        )
+        query = dict(url_obj.query)
+        query.pop("channel_binding", None)
+        url_obj = url_obj.set(query=query)
+
+
     normalized_host = _normalize_host(url_obj.host)
     if normalized_host != url_obj.host:
         url_obj = url_obj.set(host=normalized_host)
@@ -150,8 +159,8 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     if sslmode:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
-    return str(url_obj)
 
+    return str(url_obj)
 
 
 PLACEHOLDER_SETS = {

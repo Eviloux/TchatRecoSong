@@ -72,7 +72,6 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     if audience != GOOGLE_CLIENT_ID:
         raise AdminAuthError("Client Google non autorisé")
 
-
     email = idinfo.get("email")
     if ALLOWED_GOOGLE_EMAILS and email not in ALLOWED_GOOGLE_EMAILS:
         raise AdminAuthError("Adresse non autorisée", status.HTTP_403_FORBIDDEN)
