@@ -57,6 +57,24 @@ def _strip_quotes(value: str) -> str:
     return value
 
 
+PLACEHOLDER_TOKENS_IN_URL = (
+    ":USER",
+    ":USERNAME",
+    ":PASSWORD",
+    "@HOST",
+    ":HOST",
+    ":PORT",
+    "/DATABASE",
+    "/DB",
+    "/DBNAME",
+)
+
+
+def _looks_like_template_url(url: str) -> bool:
+    upper_url = url.upper()
+    return any(token in upper_url for token in PLACEHOLDER_TOKENS_IN_URL)
+
+
 def _normalize_url(raw_url: str) -> Optional[str]:
     url = raw_url.strip()
 
@@ -72,10 +90,22 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
+    if _looks_like_template_url(url):
+        logger.warning(
+            "URL de base de données '%s' ressemble à un gabarit : ignorée."
+            " Renseigne les vraies informations de connexion.",
+            raw_url,
+        )
+        return None
+
     try:
         url_obj = make_url(url)
-    except ArgumentError as exc:  # pragma: no cover - defensive guard
-        logger.error("URL de base de données invalide '%s': %s", raw_url, exc)
+    except (ArgumentError, ValueError) as exc:  # pragma: no cover - defensive guard
+        logger.error(
+            "URL de base de données invalide '%s': %s. Vérifie les variables Render/Neon.",
+            raw_url,
+            exc,
+        )
         return None
 
     normalized_host = _normalize_host(url_obj.host)
@@ -93,17 +123,53 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     return str(url_obj)
 
 
+PLACEHOLDER_SETS = {
+    "user": {"USER", "USERNAME"},
+    "password": {"PASSWORD"},
+    "host": {"HOST"},
+    "port": {"PORT"},
+    "database": {"DATABASE", "DB", "DBNAME"},
+}
+
+
+def _sanitize_part(name: str, value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+
+    stripped = value.strip()
+    placeholders = PLACEHOLDER_SETS.get(name, set())
+    if stripped.upper() in placeholders:
+        logger.warning(
+            "La variable %s contient le placeholder '%s' : valeur ignorée.",
+            name,
+            stripped,
+        )
+        return None
+
+    return stripped
+
+
 def _build_url_from_parts() -> Optional[str]:
-    user = os.getenv("DATABASE_USER") or os.getenv("POSTGRES_USER")
-    password = os.getenv("DATABASE_PASSWORD") or os.getenv("POSTGRES_PASSWORD")
-    host = (
-        os.getenv("DATABASE_INTERNAL_HOST")
-        or os.getenv("POSTGRES_INTERNAL_HOST")
-        or os.getenv("DATABASE_HOST")
-        or os.getenv("POSTGRES_HOST")
+    user = _sanitize_part(
+        "user", os.getenv("DATABASE_USER") or os.getenv("POSTGRES_USER")
     )
-    port = os.getenv("DATABASE_PORT") or os.getenv("POSTGRES_PORT")
-    database = os.getenv("DATABASE_NAME") or os.getenv("POSTGRES_DB")
+    password = _sanitize_part(
+        "password",
+        os.getenv("DATABASE_PASSWORD") or os.getenv("POSTGRES_PASSWORD"),
+    )
+    host = _sanitize_part(
+        "host",
+        (
+            os.getenv("DATABASE_INTERNAL_HOST")
+            or os.getenv("POSTGRES_INTERNAL_HOST")
+            or os.getenv("DATABASE_HOST")
+            or os.getenv("POSTGRES_HOST")
+        ),
+    )
+    port = _sanitize_part("port", os.getenv("DATABASE_PORT") or os.getenv("POSTGRES_PORT"))
+    database = _sanitize_part(
+        "database", os.getenv("DATABASE_NAME") or os.getenv("POSTGRES_DB")
+    )
 
     if not all([user, password, host, database]):
         return None
@@ -116,7 +182,15 @@ def _build_url_from_parts() -> Optional[str]:
     elif os.getenv("DATABASE_REQUIRE_SSL", "1") != "0":
         query["sslmode"] = "require"
 
-    port_value = int(port) if port and port.isdigit() else None
+    port_value = None
+    if port:
+        if port.isdigit():
+            port_value = int(port)
+        else:
+            logger.warning(
+                "La valeur de port '%s' n'est pas numérique : port ignoré.",
+                port,
+            )
 
     url = URL.create(
         "postgresql",
