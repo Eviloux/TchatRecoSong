@@ -7,8 +7,227 @@
 
 body {
   font-family: $font-family;
-  background-color: $background-color;
+  background: radial-gradient(circle at top, rgba(30, 64, 175, 0.35), transparent),
+    $background-color;
   color: $text-color;
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  padding: $spacing-large;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.7);
+
+  .app-title {
+    margin: 0;
+  }
+
+  .app-nav {
+    display: flex;
+    gap: $spacing-medium;
+
+    a {
+      color: $text-color;
+      text-decoration: none;
+      font-weight: 600;
+      position: relative;
+
+      &.router-link-active::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, $primary-color, $secondary-color);
+      }
+    }
+  }
+}
+
+.app-main {
+  flex: 1;
+  padding: $spacing-large;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.home-view {
+  .active-requests {
+    display: grid;
+    gap: $spacing-medium;
+  }
+
+  .request-card {
+    @include card-style;
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: $spacing-small;
+    }
+
+    .comment {
+      font-style: italic;
+      color: $muted-color;
+    }
+
+    .actions {
+      display: flex;
+      gap: $spacing;
+
+      .cta {
+        @include button-style;
+        text-decoration: none;
+        display: inline-flex;
+      }
+
+      button {
+        @include button-style;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+
+  .manual-form {
+    margin-top: $spacing-large;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing;
+
+    .manual-inputs {
+      display: flex;
+      gap: $spacing;
+
+      input {
+        flex: 1;
+        @include input-style;
+      }
+
+      button {
+        @include button-style;
+      }
+    }
+  }
+
+  .feedback {
+    margin-top: $spacing;
+    &.error {
+      color: $accent-color;
+    }
+
+    &.success {
+      color: $primary-color;
+    }
+  }
+}
+
+.submission-view {
+  @include card-style;
+  display: grid;
+  gap: $spacing-medium;
+
+  input {
+    @include input-style;
+  }
+
+  button {
+    @include button-style;
+    justify-self: flex-start;
+  }
+
+  .error {
+    color: $accent-color;
+  }
+
+  .success {
+    color: $primary-color;
+    font-weight: 600;
+  }
+}
+
+.admin-view {
+  .login-options {
+    @include card-style;
+    display: grid;
+    gap: $spacing-medium;
+
+    button {
+      @include button-style;
+      width: fit-content;
+    }
+
+    .login-hint {
+      color: $muted-color;
+    }
+  }
+
+  .admin-content {
+    display: grid;
+    gap: $spacing-large;
+  }
+
+  .logout {
+    @include button-style;
+    justify-self: flex-start;
+  }
+
+  .request-creator {
+    @include card-style;
+    display: grid;
+    gap: $spacing;
+
+    form {
+      display: grid;
+      gap: $spacing;
+
+      .field {
+        display: flex;
+        flex-direction: column;
+
+        input {
+          @include input-style;
+        }
+      }
+
+      button {
+        @include button-style;
+        justify-self: flex-start;
+      }
+    }
+
+    .feedback {
+      color: $secondary-color;
+    }
+  }
+
+  .active-requests {
+    @include card-style;
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: $spacing;
+
+      a {
+        color: $secondary-color;
+      }
+    }
+  }
 }
