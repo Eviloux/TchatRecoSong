@@ -10,7 +10,24 @@
     <div v-if="!token" class="login-options">
       <p>Connectez-vous avec un compte autorisé pour gérer les recommandations.</p>
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
-      <button v-if="twitchClientId" type="button" @click="loginWithTwitch">Connexion Twitch</button>
+
+      <button
+        v-if="twitchClientId"
+        type="button"
+        class="twitch-login"
+        @click="loginWithTwitch"
+      >
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false" role="img">
+            <path
+              d="M3 1L1 5v14h5v4h4l4-4h4l5-5V1H3zm18 12l-3 3h-5l-4 4v-4H4V3h17v10z"
+            />
+            <path d="M17 6h-2v5h2V6zm-5 0h-2v5h2V6z" />
+          </svg>
+        </span>
+        <span class="label">Login with Twitch</span>
+      </button>
+
       <p class="login-hint">
         Configurez les variables <code>VITE_GOOGLE_CLIENT_ID</code> et <code>VITE_TWITCH_CLIENT_ID</code> si nécessaire.
       </p>

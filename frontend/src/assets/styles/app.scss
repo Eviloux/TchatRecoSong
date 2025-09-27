@@ -124,6 +124,44 @@ body {
       width: fit-content;
     }
 
+    .twitch-login {
+      display: inline-flex;
+      align-items: center;
+      gap: $spacing-small;
+      padding: $spacing-small $spacing-large;
+      background: $twitch-color;
+      border-radius: $radius-medium;
+      box-shadow: 0 6px 16px rgba($twitch-color, 0.35);
+      font-weight: 600;
+      color: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba($twitch-color, 0.4);
+      }
+
+      &:focus-visible {
+        outline: 3px solid #b896ff;
+        outline-offset: 3px;
+      }
+
+      .icon {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      .label {
+        white-space: nowrap;
+      }
+    }
+
     .login-hint {
       color: $muted-color;
     }
