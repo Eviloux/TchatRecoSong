@@ -32,9 +32,11 @@ Pour initialiser les tables (`songs`, `ban_rules`) directement dans Neon, import
 
 ## Configuration authentification & frontend
 
-Le dépôt embarque un fichier `.env` prêt à être copié/collé dans l'interface
-"Environment" de Render. Chaque variable y est commentée pour expliquer
-précisément la valeur attendue. Voici un rappel synthétique :
+Deux fichiers `.env` distincts sont fournis dans les répertoires `backend/` et
+`frontend/`. Copie-colle leur contenu dans les sections "Environment" de tes
+services Render (ou dans tes variables locales) puis remplace chaque valeur par
+tes identifiants. Chaque variable est commentée directement dans les fichiers,
+mais voici un rappel synthétique :
 
 | Variable | À renseigner avec... |
 | --- | --- |
