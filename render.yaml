@@ -9,7 +9,7 @@ services:
       - key: DATABASE_URL
         value: "postgres://USER:PASSWORD@HOST:PORT/DBNAME"  # <-- remplace par ton URL exacte
       - key: CORS_ORIGINS
-        value: "https://tchatrecosong-front.onrender.com
+        value: "https://tchatrecosong-front.onrender.com"
 
   - type: web
     name: TchatRecoSong-front

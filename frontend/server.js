@@ -1,8 +1,7 @@
 import { createServer } from 'http';
 import { parse } from 'url';
 import { extname, join, dirname } from 'path';
-import { createReadStream } from 'fs';
-import { stat } from 'fs/promises';
+import { createReadStream, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -31,16 +30,6 @@ function getContentType(filePath) {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
-async function resolveAsset(pathname) {
-  const normalized = pathname.replace(/^\/+/, '') || 'index.html';
-  const candidate = join(distDir, normalized);
-  const stats = await stat(candidate);
-  if (stats.isDirectory()) {
-    return join(candidate, 'index.html');
-  }
-  return candidate;
-}
-
 function sendFile(res, filePath, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', getContentType(filePath));
@@ -57,17 +46,28 @@ const server = createServer(async (req, res) => {
   const { pathname } = parse(req.url);
   const safePath = pathname?.replace(/\.\./g, '') || '/';
 
+  const decodedPath = decodeURIComponent(safePath);
+  const normalized = decodedPath.replace(/^\/+/, '');
+  const hasExtension = extname(normalized) !== '';
+  const candidate = join(distDir, normalized || 'index.html');
+
   try {
-    const assetPath = await resolveAsset(decodeURIComponent(safePath));
-    sendFile(res, assetPath);
-  } catch {
-    try {
-      sendFile(res, indexPath);
-    } catch (err) {
-      res.statusCode = 500;
-      res.end('Internal Server Error');
-      console.error('Failed to serve request', err);
+    if (hasExtension && existsSync(candidate)) {
+      sendFile(res, candidate);
+      return;
     }
+
+    if (hasExtension) {
+      res.statusCode = 404;
+      res.end('Not Found');
+      return;
+    }
+
+    sendFile(res, indexPath);
+  } catch (err) {
+    res.statusCode = 500;
+    res.end('Internal Server Error');
+    console.error('Failed to serve request', err);
   }
 });
 
