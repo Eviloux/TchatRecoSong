@@ -12,10 +12,11 @@ Le bot n'attend plus de lien directement dans le tchat (Twitch les bloque). À l
 place, chaque `!reco` ouvre un ticket temporaire consommable depuis le frontend :
 
 1. `POST /requests/` (côté bot/admin) crée un ticket et renvoie un token.
-2. Le frontend "utilisateur" affiche un lien `https://votre-site/submit/<token>`.
-3. Le viewer colle un lien YouTube ou Spotify ; le backend récupère les
+2. Répondez dans Twitch avec l'URL publique du portail viewer (ex. `https://wizbit.example/reco`).
+3. Le frontend "utilisateur" liste les tickets actifs : le viewer retrouve son pseudo, ouvre le formulaire `submit/<token>` et colle un lien YouTube ou Spotify.
+4. Le backend récupère les
    métadonnées (titre, artiste, miniature) via oEmbed et alimente la base.
-4. Les features d'administration (validation de la liste, ajout de ban words)
+5. Les features d'administration (validation de la liste, ajout de ban words)
    sont protégées derrière un login Google ou Twitch.
 
 ## Base de données Neon
@@ -43,6 +44,7 @@ Les variables suivantes pilotent les accès administrateur et le portail fronten
 | `VITE_API_URL` | URL du backend, consommée par le frontend (ex : `http://localhost:8000`). |
 | `VITE_GOOGLE_CLIENT_ID` | Même valeur que côté backend pour initialiser le bouton Google. |
 | `VITE_TWITCH_CLIENT_ID` | Identifiant Twitch utilisé pour l'implicit flow côté frontend. |
+| `VITE_PUBLIC_VIEWER_URL` | (Optionnel) URL absolue à afficher dans le tchat Twitch ; utilisée pour générer les liens copiables dans l'interface. |
 
 > 💡 Les jetons générés par `POST /auth/google` et `POST /auth/twitch` sont valables
 > `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut).

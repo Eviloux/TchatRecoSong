@@ -1,10 +1,18 @@
 <template>
   <section class="home-view">
-    <h2>Soumettre une recommandation</h2>
-    <p class="home-description">
-      Tapez <strong>!reco</strong> dans le tchat Twitch. Un ticket temporaire apparaît
-      ici avec un lien direct vers le formulaire de soumission.
-    </p>
+    <header class="hero">
+      <h2 class="hero-title">Dépose ta reco depuis Wizbit</h2>
+      <p class="hero-subtitle">
+        Dans le tchat Twitch, tape <strong>!reco</strong>. Le bot te répond avec le lien
+        <strong>{{ viewerUrl }}</strong> : clique dessus pour revenir ici et retrouve ton
+        ticket.
+      </p>
+      <ol class="hero-steps">
+        <li>Fais <strong>!reco</strong> sur Twitch.</li>
+        <li>Ouvre le lien Wizbit affiché par le bot.</li>
+        <li>Repère ton pseudo, puis colle ton lien YouTube ou Spotify.</li>
+      </ol>
+    </header>
 
     <div class="active-requests" v-if="requests.length">
       <article v-for="request in requests" :key="request.token" class="request-card">
@@ -17,7 +25,7 @@
           <RouterLink class="cta" :to="{ name: 'submit', params: { token: request.token } }">
             Ouvrir le formulaire
           </RouterLink>
-          <button type="button" @click="copyLink(request.token)">Copier le lien</button>
+          <button type="button" @click="copyLink(request.token)">Copier le lien direct</button>
         </div>
       </article>
     </div>
@@ -62,6 +70,7 @@ const feedbackType = ref<'error' | 'success' | null>(null);
 let pollingHandle: number | undefined;
 
 const API_URL = import.meta.env.VITE_API_URL;
+const viewerUrl = import.meta.env.VITE_PUBLIC_VIEWER_URL || window.location.origin;
 
 const fetchRequests = async () => {
   if (!API_URL) {
@@ -88,7 +97,7 @@ const goToToken = () => {
 
 const copyLink = async (token: string) => {
   try {
-    await navigator.clipboard.writeText(`${window.location.origin}/submit/${token}`);
+    await navigator.clipboard.writeText(`${viewerUrl}/submit/${token}`);
     feedback.value = 'Lien copié dans le presse-papiers !';
     feedbackType.value = 'success';
   } catch (error) {

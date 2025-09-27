@@ -65,6 +65,56 @@ body {
 }
 
 .home-view {
+  display: grid;
+  gap: $spacing-large;
+
+  .hero {
+    @include card-style;
+    display: grid;
+    gap: $spacing;
+
+    .hero-title {
+      font-size: clamp(1.6rem, 2.2vw, 2.4rem);
+      margin: 0;
+    }
+
+    .hero-subtitle {
+      color: $muted-color;
+      font-size: 1rem;
+    }
+
+    .hero-steps {
+      counter-reset: step;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: $spacing-small;
+
+      li {
+        position: relative;
+        padding-left: 2.4rem;
+        font-weight: 500;
+
+        &::before {
+          counter-increment: step;
+          content: counter(step);
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 1.8rem;
+          height: 1.8rem;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.12);
+          display: grid;
+          place-items: center;
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+
   .active-requests {
     display: grid;
     gap: $spacing-medium;
