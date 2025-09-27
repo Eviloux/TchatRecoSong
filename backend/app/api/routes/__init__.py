@@ -1,3 +1,3 @@
-from . import songs, ban_rules, submission_requests, auth
+from . import songs, ban_rules, public_submissions, auth
 
-__all__ = ["songs", "ban_rules", "submission_requests", "auth"]
+__all__ = ["songs", "ban_rules", "public_submissions", "auth"]

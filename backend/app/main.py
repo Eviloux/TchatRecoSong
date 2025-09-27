@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import CORS_ORIGINS
-from app.api.routes import songs, ban_rules, submission_requests, auth
+from app.api.routes import songs, ban_rules, public_submissions, auth
 from app import models  # noqa: F401 - ensure models are imported before create_all
 from app.database.connection import Base, engine
 
@@ -22,7 +22,7 @@ app.add_middleware(
 # Routes
 app.include_router(songs.router, prefix="/songs", tags=["Songs"])
 app.include_router(ban_rules.router, prefix="/ban", tags=["BanRules"])
-app.include_router(submission_requests.router, prefix="/requests", tags=["SubmissionRequests"])
+app.include_router(public_submissions.router, prefix="/public/submissions", tags=["PublicSubmissions"])
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
 @app.get("/")

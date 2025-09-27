@@ -44,4 +44,8 @@ const fetchSongs = async () => {
 };
 
 onMounted(fetchSongs);
+
+defineExpose({
+  refresh: fetchSongs,
+});
 </script>

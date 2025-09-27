@@ -11,38 +11,13 @@
       <p>Connectez-vous avec un compte autorisé pour gérer les recommandations.</p>
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
       <button v-if="twitchClientId" type="button" @click="loginWithTwitch">Connexion Twitch</button>
-      <p class="login-hint">Configurez les variables <code>VITE_GOOGLE_CLIENT_ID</code> et <code>VITE_TWITCH_CLIENT_ID</code>.</p>
+      <p class="login-hint">
+        Configurez les variables <code>VITE_GOOGLE_CLIENT_ID</code> et <code>VITE_TWITCH_CLIENT_ID</code> si nécessaire.
+      </p>
     </div>
 
     <div v-else class="admin-content">
       <button type="button" class="logout" @click="logout">Se déconnecter</button>
-
-      <section class="request-creator">
-        <h3>Créer un ticket de soumission</h3>
-        <form @submit.prevent="createRequest">
-          <div class="field">
-            <label for="twitch-user">Utilisateur Twitch</label>
-            <input id="twitch-user" v-model="requestForm.twitch_user" required />
-          </div>
-          <div class="field">
-            <label for="comment">Commentaire (optionnel)</label>
-            <input id="comment" v-model="requestForm.comment" placeholder="Précision pour le viewer" />
-          </div>
-          <button type="submit">Générer le ticket</button>
-        </form>
-        <p v-if="requestFeedback" class="feedback">{{ requestFeedback }}</p>
-      </section>
-
-      <section class="active-requests" v-if="activeRequests.length">
-        <h3>Tickets actifs</h3>
-        <ul>
-          <li v-for="request in activeRequests" :key="request.token">
-            <span>{{ request.twitch_user }} · expire le {{ formatDate(request.expires_at) }}</span>
-            <a :href="`${windowLocation}/submit/${request.token}`" target="_blank" rel="noopener">Ouvrir</a>
-          </li>
-        </ul>
-      </section>
-
       <SongList />
       <AdminPanel :token="token" />
     </div>
@@ -53,12 +28,6 @@
 import { onMounted, ref } from 'vue';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
-
-interface SubmissionRequest {
-  token: string;
-  twitch_user: string;
-  expires_at: string;
-}
 
 interface AdminProfile {
   name: string;
@@ -79,10 +48,6 @@ const token = ref<string | null>(localStorage.getItem('admin_token'));
 const storedProfile = localStorage.getItem('admin_profile');
 const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
 const error = ref('');
-const requestForm = ref({ twitch_user: '', comment: '' });
-const requestFeedback = ref('');
-const activeRequests = ref<SubmissionRequest[]>([]);
-const windowLocation = window.location.origin;
 
 const storeSession = (authToken: string, provider: string, name: string) => {
   token.value = authToken;
@@ -113,7 +78,6 @@ const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<s
     }
     const data = await response.json();
     storeSession(data.token, data.provider, data.name);
-    await fetchActiveRequests();
   } catch (err: any) {
     console.error(err);
     error.value = err.message || 'Connexion impossible.';
@@ -159,53 +123,8 @@ const checkTwitchRedirect = async () => {
   }
 };
 
-const fetchActiveRequests = async () => {
-  if (!API_URL) return;
-  try {
-    const response = await fetch(`${API_URL}/requests/active`);
-    if (!response.ok) throw new Error('Erreur serveur');
-    activeRequests.value = await response.json();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const formatDate = (input: string) => new Date(input).toLocaleTimeString();
-
-const createRequest = async () => {
-  if (!token.value || !API_URL) return;
-  try {
-    requestFeedback.value = '';
-    const payload = {
-      twitch_user: requestForm.value.twitch_user.trim(),
-      comment: requestForm.value.comment?.trim() || undefined,
-    };
-    const response = await fetch(`${API_URL}/requests/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token.value}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({ detail: 'Erreur inconnue.' }));
-      throw new Error(data.detail);
-    }
-    const data = await response.json();
-    requestFeedback.value = `Ticket ${data.token} créé. Partagez ${windowLocation}/submit/${data.token}`;
-    requestForm.value.twitch_user = '';
-    requestForm.value.comment = '';
-    await fetchActiveRequests();
-  } catch (err: any) {
-    console.error(err);
-    requestFeedback.value = err.message || 'Impossible de créer le ticket.';
-  }
-};
-
 onMounted(async () => {
   initGoogle();
   await checkTwitchRedirect();
-  await fetchActiveRequests();
 });
 </script>

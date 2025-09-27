@@ -1,122 +1,97 @@
 <template>
   <section class="home-view">
     <header class="hero">
-      <h2 class="hero-title">Dépose ta reco depuis Wizbit</h2>
+      <h2 class="hero-title">Dépose ta reco en quelques secondes</h2>
       <p class="hero-subtitle">
-        Dans le tchat Twitch, tape <strong>!reco</strong>. Le bot te répond avec le lien
-        <strong>{{ viewerUrl }}</strong> : clique dessus pour revenir ici et retrouve ton
-        ticket.
+        Tape <strong>!reco</strong> dans le tchat Twitch : le bot répondra avec ce lien public
+        <strong>{{ viewerUrl }}</strong>. Colle ensuite ton lien YouTube ou Spotify ci-dessous.
       </p>
-      <ol class="hero-steps">
-        <li>Fais <strong>!reco</strong> sur Twitch.</li>
-        <li>Ouvre le lien Wizbit affiché par le bot.</li>
-        <li>Repère ton pseudo, puis colle ton lien YouTube ou Spotify.</li>
-      </ol>
     </header>
 
-    <div class="active-requests" v-if="requests.length">
-      <article v-for="request in requests" :key="request.token" class="request-card">
-        <header>
-          <h3>Ticket pour {{ request.twitch_user }}</h3>
-          <span class="expires">Expire le {{ formatDate(request.expires_at) }}</span>
-        </header>
-        <p v-if="request.comment" class="comment">“{{ request.comment }}”</p>
-        <div class="actions">
-          <RouterLink class="cta" :to="{ name: 'submit', params: { token: request.token } }">
-            Ouvrir le formulaire
-          </RouterLink>
-          <button type="button" @click="copyLink(request.token)">Copier le lien direct</button>
-        </div>
-      </article>
-    </div>
-    <p v-else class="empty-state">Aucun ticket actif pour le moment.</p>
-
-    <form class="manual-form" @submit.prevent="goToToken">
-      <label for="token-input">Vous avez déjà un token ?</label>
-      <div class="manual-inputs">
-        <input
-          id="token-input"
-          v-model="manualToken"
-          type="text"
-          placeholder="Collez le token reçu"
-          required
-        />
-        <button type="submit">Continuer</button>
-      </div>
+    <form class="submission-form" @submit.prevent="submit" novalidate>
+      <label for="link">Lien YouTube ou Spotify</label>
+      <input
+        id="link"
+        v-model="link"
+        type="url"
+        placeholder="https://www.youtube.com/watch?v=..."
+        :disabled="loading"
+        required
+      />
+      <button type="submit" :disabled="loading">
+        {{ loading ? 'Envoi en cours…' : 'Envoyer ma recommandation' }}
+      </button>
     </form>
 
-    <p v-if="feedback" class="feedback" :class="{ error: feedbackType === 'error', success: feedbackType === 'success' }">
-      {{ feedback }}
-    </p>
+    <p v-if="feedback" class="feedback" :class="feedbackType">{{ feedback }}</p>
+
+    <SongList ref="songListRef" />
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
-import { useRouter, RouterLink } from 'vue-router';
+import { ref } from 'vue';
+import SongList from '../components/SongList.vue';
 
-interface SubmissionRequest {
-  token: string;
-  twitch_user: string;
-  comment?: string | null;
-  expires_at: string;
-}
-
-const router = useRouter();
-const manualToken = ref('');
-const requests = ref<SubmissionRequest[]>([]);
-const feedback = ref('');
-const feedbackType = ref<'error' | 'success' | null>(null);
-let pollingHandle: number | undefined;
+type SongListInstance = {
+  refresh: () => Promise<void> | void;
+};
 
 const API_URL = import.meta.env.VITE_API_URL;
 const viewerUrl = import.meta.env.VITE_PUBLIC_VIEWER_URL || window.location.origin;
 
-const fetchRequests = async () => {
+const link = ref('');
+const feedback = ref('');
+const feedbackType = ref<'success' | 'error' | ''>('');
+const loading = ref(false);
+const songListRef = ref<SongListInstance | null>(null);
+
+const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i;
+const SPOTIFY_REGEX = /^(https?:\/\/)?(open\.)?spotify\.com\//i;
+
+const submit = async () => {
   if (!API_URL) {
     feedback.value = "VITE_API_URL n'est pas configuré.";
     feedbackType.value = 'error';
     return;
   }
-  try {
-    const response = await fetch(`${API_URL}/requests/active`);
-    if (!response.ok) throw new Error('Erreur serveur');
-    const data = await response.json();
-    requests.value = data;
-  } catch (error) {
-    console.error(error);
-    feedback.value = 'Impossible de récupérer les tickets actifs.';
+
+  feedback.value = '';
+  feedbackType.value = '';
+  const trimmed = link.value.trim();
+
+  if (!trimmed || (!YOUTUBE_REGEX.test(trimmed) && !SPOTIFY_REGEX.test(trimmed))) {
+    feedback.value = 'Merci de coller un lien YouTube ou Spotify valide.';
     feedbackType.value = 'error';
+    return;
   }
-};
 
-const goToToken = () => {
-  if (!manualToken.value) return;
-  router.push({ name: 'submit', params: { token: manualToken.value.trim() } });
-};
-
-const copyLink = async (token: string) => {
+  loading.value = true;
   try {
-    await navigator.clipboard.writeText(`${viewerUrl}/submit/${token}`);
-    feedback.value = 'Lien copié dans le presse-papiers !';
+    const response = await fetch(`${API_URL}/public/submissions/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ link: trimmed }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ detail: 'Erreur serveur.' }));
+      throw new Error(payload.detail ?? "Impossible d'enregistrer la chanson.");
+    }
+
+    feedback.value = 'Merci ! Ta recommandation a été enregistrée.';
     feedbackType.value = 'success';
-  } catch (error) {
+    link.value = '';
+
+    if (songListRef.value) {
+      await songListRef.value.refresh();
+    }
+  } catch (error: any) {
     console.error(error);
-    feedback.value = 'Impossible de copier le lien sur cet appareil.';
+    feedback.value = error.message ?? "Impossible d'enregistrer la chanson.";
     feedbackType.value = 'error';
+  } finally {
+    loading.value = false;
   }
 };
-
-const formatDate = (input: string) => {
-  return new Date(input).toLocaleTimeString();
-};
-
-onMounted(() => {
-  fetchRequests();
-  pollingHandle = window.setInterval(fetchRequests, 10000);
-});
-
-onUnmounted(() => {
-  if (pollingHandle) window.clearInterval(pollingHandle);
-});
 </script>

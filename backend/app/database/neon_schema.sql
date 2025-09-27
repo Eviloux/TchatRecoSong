@@ -25,14 +25,3 @@ CREATE INDEX IF NOT EXISTS idx_ban_rules_title ON ban_rules (title);
 CREATE INDEX IF NOT EXISTS idx_ban_rules_artist ON ban_rules (artist);
 CREATE INDEX IF NOT EXISTS idx_ban_rules_link ON ban_rules (link);
 
-CREATE TABLE IF NOT EXISTS submission_requests (
-    id SERIAL PRIMARY KEY,
-    token VARCHAR(32) UNIQUE NOT NULL,
-    twitch_user TEXT NOT NULL,
-    comment TEXT,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
-    expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    consumed_at TIMESTAMP WITHOUT TIME ZONE
-);
-
-CREATE INDEX IF NOT EXISTS idx_submission_requests_token ON submission_requests (token);

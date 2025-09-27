@@ -82,100 +82,27 @@ body {
       color: $muted-color;
       font-size: 1rem;
     }
-
-    .hero-steps {
-      counter-reset: step;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: $spacing-small;
-
-      li {
-        position: relative;
-        padding-left: 2.4rem;
-        font-weight: 500;
-
-        &::before {
-          counter-increment: step;
-          content: counter(step);
-          position: absolute;
-          left: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 1.8rem;
-          height: 1.8rem;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.12);
-          display: grid;
-          place-items: center;
-          font-size: 0.9rem;
-        }
-      }
-    }
   }
 
-  .active-requests {
-    display: grid;
-    gap: $spacing-medium;
-  }
-
-  .request-card {
+  .submission-form {
     @include card-style;
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: $spacing-small;
-    }
-
-    .comment {
-      font-style: italic;
-      color: $muted-color;
-    }
-
-    .actions {
-      display: flex;
-      gap: $spacing;
-
-      .cta {
-        @include button-style;
-        text-decoration: none;
-        display: inline-flex;
-      }
-
-      button {
-        @include button-style;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-    }
-  }
-
-  .manual-form {
-    margin-top: $spacing-large;
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: $spacing;
 
-    .manual-inputs {
-      display: flex;
-      gap: $spacing;
+    input {
+      @include input-style;
+    }
 
-      input {
-        flex: 1;
-        @include input-style;
-      }
-
-      button {
-        @include button-style;
-      }
+    button {
+      @include button-style;
+      justify-self: flex-start;
     }
   }
 
   .feedback {
-    margin-top: $spacing;
+    margin: 0 0 $spacing 0;
+    font-weight: 600;
+
     &.error {
       color: $accent-color;
     }
@@ -183,30 +110,6 @@ body {
     &.success {
       color: $primary-color;
     }
-  }
-}
-
-.submission-view {
-  @include card-style;
-  display: grid;
-  gap: $spacing-medium;
-
-  input {
-    @include input-style;
-  }
-
-  button {
-    @include button-style;
-    justify-self: flex-start;
-  }
-
-  .error {
-    color: $accent-color;
-  }
-
-  .success {
-    color: $primary-color;
-    font-weight: 600;
   }
 }
 
@@ -234,50 +137,5 @@ body {
   .logout {
     @include button-style;
     justify-self: flex-start;
-  }
-
-  .request-creator {
-    @include card-style;
-    display: grid;
-    gap: $spacing;
-
-    form {
-      display: grid;
-      gap: $spacing;
-
-      .field {
-        display: flex;
-        flex-direction: column;
-
-        input {
-          @include input-style;
-        }
-      }
-
-      button {
-        @include button-style;
-        justify-self: flex-start;
-      }
-    }
-
-    .feedback {
-      color: $secondary-color;
-    }
-  }
-
-  .active-requests {
-    @include card-style;
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: $spacing;
-
-      a {
-        color: $secondary-color;
-      }
-    }
   }
 }

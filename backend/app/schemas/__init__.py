@@ -2,18 +2,12 @@
 
 from .song import SongCreate, SongOut
 from .ban_rule import BanRuleCreate, BanRuleOut
-from .submission_request import (
-    SubmissionRequestCreate,
-    SubmissionRequestPublic,
-    SubmissionFulfillPayload,
-)
+from .public_submission import PublicSubmissionPayload
 
 __all__ = [
     "SongCreate",
     "SongOut",
     "BanRuleCreate",
     "BanRuleOut",
-    "SubmissionRequestCreate",
-    "SubmissionRequestPublic",
-    "SubmissionFulfillPayload",
+    "PublicSubmissionPayload",
 ]
