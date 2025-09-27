@@ -23,7 +23,8 @@ except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécut
     )
 
     raise RuntimeError(
-        "Connexion à la base de données impossible. Vérifie `DATABASE_URL`/`NEON_DATABASE_URL` "
+        "Connexion à la base de données impossible. Vérifie la variable `DATABASE_URL` "
+
         "et les identifiants configurés sur Render ou Neon."
     ) from exc
 

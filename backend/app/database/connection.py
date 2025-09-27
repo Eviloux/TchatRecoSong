@@ -1,7 +1,8 @@
 import logging
 import os
 
-from typing import Dict, Iterable, Optional
+from typing import Dict, Optional
+
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
@@ -41,26 +42,6 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "database": url_obj.database,
         "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
     }
-
-def _iter_env_candidates() -> Iterable[str]:
-
-    # On privilégie les variables explicitement configurées (Neon, DATABASE_URL)
-    # avant les URLs "internal" fournies par certains hébergeurs qui peuvent
-    # pointer vers une ancienne instance (ex : Render conserve parfois une
-    # `DATABASE_INTERNAL_URL` obsolète).
-    keys = (
-        "NEON_DATABASE_URL",
-        "DATABASE_URL",
-        "DATABASE_EXTERNAL_URL",
-        "POSTGRES_URL",
-        "DATABASE_INTERNAL_URL",
-        "POSTGRES_INTERNAL_URL",
-
-    )
-    for key in keys:
-        value = os.getenv(key)
-        if value:
-            yield value
 
 
 def _normalize_host(host: Optional[str]) -> Optional[str]:
@@ -165,7 +146,6 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     if sslmode:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
-
     return str(url_obj)
 
 
@@ -252,10 +232,17 @@ def _build_url_from_parts() -> Optional[str]:
 
 
 def _determine_database_url() -> str:
-    for value in _iter_env_candidates():
-        normalized = _normalize_url(value)
+
+    raw_database_url = os.getenv("DATABASE_URL")
+    if raw_database_url:
+        normalized = _normalize_url(raw_database_url)
         if normalized:
             return normalized
+        raise RuntimeError(
+            "La variable `DATABASE_URL` est définie mais invalide. Vérifie l'URL collée "
+            "depuis Neon/Render (sans le préfixe `psql` ni les quotes)."
+        )
+
 
     assembled = _build_url_from_parts()
     if assembled:
@@ -263,9 +250,10 @@ def _determine_database_url() -> str:
         return assembled
 
     raise RuntimeError(
-        "Aucune variable de connexion PostgreSQL n'est définie. "
-        "Renseigne `NEON_DATABASE_URL`, `DATABASE_URL` ou les champs `DATABASE_*`/`POSTGRES_*` "
-        "fournis par Neon ou ton hébergeur."
+
+        "La variable `DATABASE_URL` n'est pas définie. Renseigne-la avec l'URL fournie "
+        "par Neon ou Render dans les variables d'environnement du service."
+
     )
 
 

@@ -26,7 +26,6 @@ bannissement) restent réservés aux comptes Google/Twitch autorisés.
 
 Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration GitHub depuis le dashboard Neon, une variable `NEON_DATABASE_URL` (ou `DATABASE_URL`) est ajoutée aux workflows GitHub Actions et peut être récupérée depuis l'onglet **Connect**. Copie cette URL et colle-la dans les variables d'environnement de Render (ou dans ton `.env` local). Elle contient déjà le `sslmode=require` nécessaire.
 
-
 #### Mettre à jour la variable sur Render pas à pas
 
 1. Ouvre ton service **Backend** sur Render.
@@ -34,13 +33,14 @@ Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration G
 3. Renseigne `DATABASE_URL` comme nom, et colle l'URL Neon nettoyée (voir remarques ci-dessous) comme valeur.
 4. Clique sur **Save Changes**, puis déclenche un redéploiement via **Manual Deploy > Deploy latest commit** pour que la nouvelle URL soit prise en compte.
 
-> 🎯 Si tu utilises aussi `DATABASE_INTERNAL_URL` ou `POSTGRES_INTERNAL_URL`, mets-les à jour de la même façon : Render prendra automatiquement la bonne clé au démarrage.
 
 > ❌ Neon affiche parfois un suffixe `&channel_binding=require`. Supprime-le : libpq/psycopg2 utilisé sur Render ne gère pas cette option et échouera avec une erreur d'authentification. Garde simplement `?sslmode=require` dans l'URL finale.
 
 > ⚠️ Neon affiche souvent un exemple sous la forme `psql 'postgresql://...'`. Ne recopie que la partie `postgresql://…` (sans le préfixe `psql` ni les quotes), sinon la connexion échouera.
 
-> 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Renseigne-les dans `DATABASE_HOST`, `DATABASE_USER`, etc. comme indiqué dans `backend/.env.example`.
+
+> 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Tu peux alors définir `DATABASE_USER`, `DATABASE_PASSWORD`, etc. en local : le backend reconstruira automatiquement `DATABASE_URL` à partir de ces valeurs.
+
 
 Pour initialiser les tables (`songs`, `ban_rules`) dans Neon, exécute le script SQL `backend/app/database/neon_schema.sql` via l'interface SQL Neon ou avec `psql`.
 
@@ -55,11 +55,10 @@ python -m app.database.connection
 
 La commande exécute un `SELECT 1` sur la base ciblée et affiche les paramètres (sans le mot de passe) dans les logs. En cas d'échec, le message d'erreur SQLAlchemy est accompagné de l'hôte, du port et de l'utilisateur effectivement utilisés — pratique pour détecter une faute de frappe ou un mot de passe expiré.
 
-
 ### Utilisation avec Render PostgreSQL
 
-- Lorsque tu relies un service Render à une base PostgreSQL Render, la plateforme injecte automatiquement plusieurs variables (`DATABASE_INTERNAL_URL`, `DATABASE_URL`, `DATABASE_INTERNAL_HOST`, etc.). Le backend détecte ces différentes clés et sélectionne celle qui permet de se connecter sans configuration supplémentaire.
-- **Préférence** : copie/colle directement la valeur de `DATABASE_INTERNAL_URL` (ou `POSTGRES_INTERNAL_URL`) dans ton dashboard Render. Elle contient déjà le suffixe complet (`.render.com` ou `.internal`) ainsi que le port.
+- Render fournit plusieurs variables système, mais **seule** `DATABASE_URL` est lue par le backend. Assure-toi de mettre cette clé à jour dans l'onglet **Environment** après chaque rotation de mot de passe.
+
 - Si tu renseignes manuellement les champs (`DATABASE_HOST`, `DATABASE_PORT`, ...), assure-toi que le nom d'hôte contient bien le domaine complet (ex. `dpg-...frankfurt-postgres.render.com`). L'erreur `could not translate host name` indiquée par SQLAlchemy signifie que l'hôte est tronqué.
 - Un champ `sslmode` sera ajouté automatiquement (valeur `require` par défaut) si aucun paramètre n'est précisé. Tu peux le forcer via `DATABASE_SSLMODE=require` si ton hébergeur n'ajoute pas ce paramètre à l'URL.
 
@@ -72,7 +71,9 @@ dans ces fichiers, mais voici un rappel synthétique :
 
 | Variable | À renseigner avec... |
 | --- | --- |
-| `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. Tu peux également utiliser `DATABASE_INTERNAL_URL` ou les variables `POSTGRES_*` de Render. |
+
+| `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. C'est la seule clé lue par le backend en production. |
+
 | `CORS_ORIGINS` | Les domaines autorisés à appeler l'API, séparés par des virgules. |
 | `ADMIN_JWT_SECRET` | Une chaîne secrète longue et aléatoire pour signer les JWT admin. |
 | `ADMIN_TOKEN_TTL_MINUTES` | Durée de validité des tokens admin (720 = 12 h). |
