@@ -13,15 +13,22 @@ correspondantes via `POST /public/submissions/` et enregistre la recommandation
 en base. Les écrans d'administration (liste des chansons, règles de
 bannissement) restent réservés aux comptes Google/Twitch autorisés.
 
-## Base de données Neon
+## Base de données Neon / Render
 
-Le backend FastAPI est désormais prêt à se connecter à l'instance Neon fournie par défaut. Si aucune variable d'environnement `DATABASE_URL` n'est définie, la connexion utilisera automatiquement l'URL suivante :
+Le backend FastAPI est prêt à se connecter à l'instance Neon fournie par défaut. Si aucune variable d'environnement `DATABASE_URL` n'est définie, la connexion utilisera automatiquement l'URL suivante :
 
 ```
 postgresql://neondb_owner:npg_ljrtUWJ9o7Cs@ep-plain-leaf-ag9ynkn2-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
 Pour initialiser les tables (`songs`, `ban_rules`) directement dans Neon, importez le fichier SQL `backend/app/database/neon_schema.sql` via l'outil SQL du tableau de bord Neon ou avec `psql`.
+
+### Utilisation avec Render PostgreSQL
+
+- Lorsque tu relies un service Render à une base PostgreSQL Render, la plateforme injecte automatiquement plusieurs variables (`DATABASE_INTERNAL_URL`, `DATABASE_URL`, `DATABASE_INTERNAL_HOST`, etc.). Le backend détecte ces différentes clés et sélectionne celle qui permet de se connecter sans configuration supplémentaire.
+- **Préférence** : copie/colle directement la valeur de `DATABASE_INTERNAL_URL` (ou `POSTGRES_INTERNAL_URL`) dans ton dashboard Render. Elle contient déjà le suffixe complet (`.render.com` ou `.internal`) ainsi que le port.
+- Si tu renseignes manuellement les champs (`DATABASE_HOST`, `DATABASE_PORT`, ...), assure-toi que le nom d'hôte contient bien le domaine complet (ex. `dpg-...frankfurt-postgres.render.com`). L'erreur `could not translate host name` indiquée par SQLAlchemy signifie que l'hôte est tronqué.
+- Un champ `sslmode` sera ajouté automatiquement (valeur `require` par défaut) si aucun paramètre n'est précisé. Tu peux le forcer via `DATABASE_SSLMODE=require` si ton hébergeur n'ajoute pas ce paramètre à l'URL.
 
 ## Configuration authentification & frontend
 
@@ -31,7 +38,7 @@ précisément la valeur attendue. Voici un rappel synthétique :
 
 | Variable | À renseigner avec... |
 | --- | --- |
-| `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. |
+| `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. Tu peux également utiliser `DATABASE_INTERNAL_URL` ou les variables `POSTGRES_*` de Render. |
 | `CORS_ORIGINS` | Les domaines autorisés à appeler l'API, séparés par des virgules. |
 | `ADMIN_JWT_SECRET` | Une chaîne secrète longue et aléatoire pour signer les JWT admin. |
 | `ADMIN_TOKEN_TTL_MINUTES` | Durée de validité des tokens admin (720 = 12 h). |
