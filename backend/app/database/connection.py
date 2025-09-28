@@ -22,6 +22,15 @@ def _mask_password(url_obj: URL) -> URL:
     return url_obj.set(password="***")
 
 
+def _format_url_for_log(url_str: str) -> str:
+    """Prépare une URL pour les logs en masquant le mot de passe si possible."""
+
+    try:
+        return str(_mask_password(make_url(url_str)))
+    except ArgumentError:
+        return url_str
+
+
 def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
     """Expose les principales infos de connexion sans mot de passe."""
 
@@ -227,8 +236,13 @@ def _build_url_from_parts() -> Optional[str]:
 def _determine_database_url() -> str:
     raw_database_url = os.getenv("DATABASE_URL")
     if raw_database_url:
+        logger.info("DATABASE_URL brut fourni: %s", _format_url_for_log(raw_database_url))
         normalized = _normalize_url(raw_database_url)
         if normalized:
+            logger.info(
+                "DATABASE_URL normalisée utilisée: %s",
+                _format_url_for_log(normalized),
+            )
             return normalized
         raise RuntimeError(
             "La variable `DATABASE_URL` est définie mais invalide. Vérifie l'URL collée "
@@ -237,7 +251,10 @@ def _determine_database_url() -> str:
 
     assembled = _build_url_from_parts()
     if assembled:
-        logger.info("DATABASE_URL assemblée à partir des variables individuelles.")
+        logger.info(
+            "DATABASE_URL assemblée à partir des variables individuelles: %s",
+            _format_url_for_log(assembled),
+        )
         return assembled
 
     raise RuntimeError(
@@ -248,11 +265,10 @@ def _determine_database_url() -> str:
 
 DATABASE_URL = _determine_database_url()
 
-try:
-    _masked = _mask_password(make_url(DATABASE_URL))
-    logger.info("Connexion PostgreSQL configurée vers %s", _masked)
-except ArgumentError:  # pragma: no cover - log defensif
-    logger.info("Connexion PostgreSQL configurée via chaîne brute." )
+logger.info(
+    "Connexion PostgreSQL configurée vers %s",
+    _format_url_for_log(DATABASE_URL),
+)
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -270,7 +286,9 @@ def get_db():
 def describe_active_database() -> Dict[str, Optional[str]]:
     """Retourne les paramètres de connexion utilisés (mot de passe exclu)."""
 
-    return _connection_snapshot(DATABASE_URL)
+    snapshot = _connection_snapshot(DATABASE_URL)
+    snapshot["url"] = _format_url_for_log(DATABASE_URL)
+    return snapshot
 
 
 def check_connection() -> None:

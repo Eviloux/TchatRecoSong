@@ -11,8 +11,6 @@ from app.database.connection import Base, check_connection, describe_active_data
 
 logger = logging.getLogger(__name__)
 
-
-
 app = FastAPI(title="Twitch Song Recommender")
 
 
