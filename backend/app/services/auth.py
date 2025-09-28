@@ -8,8 +8,9 @@ from typing import Any
 
 import httpx
 import jwt
-from jwt import PyJWTError
-from jwt.algorithms import RSAAlgorithm
+
+from jwt import PyJWTError, PyJWK
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -69,7 +70,9 @@ def _load_google_public_key(kid: str) -> Any:
     keys = _fetch_google_keys()
     for jwk in keys:
         if jwk.get("kid") == kid:
-            return RSAAlgorithm.from_jwk(json.dumps(jwk))
+
+            return PyJWK.from_dict(jwk).key
+
     raise AdminAuthError("Clé Google introuvable pour le token fourni")
 
 

@@ -13,7 +13,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-
 def _mask_password_fallback(url: str) -> str:
     """Mask simple DSN passwords when SQLAlchemy parsing fails."""
 
@@ -62,6 +61,7 @@ def _render_url(url_obj: URL, hide_password: bool) -> str:
             query = "?" + "&".join(f"{k}={v}" for k, v in url_obj.query.items())
 
         return f"{url_obj.drivername}://{auth}{host}{database}{query}"
+
 
 
 def _format_url_for_log(url: Optional[str]) -> str:
@@ -198,6 +198,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
     return _render_url(url_obj, hide_password=False)
+
 
 PLACEHOLDER_SETS = {
     "user": {"USER", "USERNAME"},
