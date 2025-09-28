@@ -31,6 +31,33 @@ def _format_url_for_log(url_str: str) -> str:
         return url_str
 
 
+
+def _log_plain_password(url_str: str) -> None:
+    """Affiche explicitement le mot de passe PostgreSQL pour diagnostic utilisateur."""
+
+    try:
+        url_obj = make_url(url_str)
+    except ArgumentError:
+        logger.warning(
+            "Impossible d'extraire le mot de passe depuis l'URL '%s' : format invalide.",
+            url_str,
+        )
+        return
+
+    password = url_obj.password or ""
+    if password:
+        logger.warning(
+            "Mot de passe PostgreSQL utilisé (à retirer une fois le debug terminé) : %s",
+            password,
+        )
+    else:
+        logger.warning(
+            "Aucun mot de passe PostgreSQL détecté dans l'URL fournie." \
+            " Vérifie la variable d'environnement.",
+        )
+
+
+
 def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
     """Expose les principales infos de connexion sans mot de passe."""
 
@@ -243,6 +270,9 @@ def _determine_database_url() -> str:
                 "DATABASE_URL normalisée utilisée: %s",
                 _format_url_for_log(normalized),
             )
+
+            _log_plain_password(normalized)
+
             return normalized
         raise RuntimeError(
             "La variable `DATABASE_URL` est définie mais invalide. Vérifie l'URL collée "
@@ -255,6 +285,9 @@ def _determine_database_url() -> str:
             "DATABASE_URL assemblée à partir des variables individuelles: %s",
             _format_url_for_log(assembled),
         )
+
+        _log_plain_password(assembled)
+
         return assembled
 
     raise RuntimeError(
