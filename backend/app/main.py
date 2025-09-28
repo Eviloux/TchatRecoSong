@@ -7,36 +7,30 @@ from sqlalchemy.exc import OperationalError
 from app.config import CORS_ORIGINS
 from app.api.routes import songs, ban_rules, public_submissions, auth
 from app import models  # noqa: F401 - ensure models are imported before create_all
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 from app.database.connection import Base, check_connection, describe_active_database, engine
 
 logger = logging.getLogger(__name__)
 
-# Créer la DB si elle n’existe pas
-try:
-    check_connection()
-    Base.metadata.create_all(bind=engine)
-except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécution
-    snapshot = describe_active_database()
-    logger.error(
-        "Échec de connexion PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
-    )
-<<<<<<< HEAD
-
-    raise RuntimeError(
-        "Connexion à la base de données impossible. Vérifie la variable `DATABASE_URL` "
-
-=======
-    raise RuntimeError(
-        "Connexion à la base de données impossible. Vérifie la variable `DATABASE_URL` "
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
-        "et les identifiants configurés sur Render ou Neon."
-    ) from exc
-
 app = FastAPI(title="Twitch Song Recommender")
+
+
+@app.on_event("startup")
+async def startup_checks() -> None:
+    """Vérifie la connexion PostgreSQL sans bloquer le démarrage du backend."""
+
+    try:
+        check_connection()
+    except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécution
+        snapshot = describe_active_database()
+        logger.error(
+            "Échec de connexion à PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
+        )
+        logger.warning(
+            "Le backend démarre sans base de données active : les routes dépendantes "
+            "échoueront tant que la connexion n'est pas rétablie."
+        )
+    else:
+        Base.metadata.create_all(bind=engine)
 
 # Middleware CORS
 app.add_middleware(
