@@ -1,31 +1,15 @@
 import logging
 import os
-<<<<<<< HEAD
-
 from typing import Dict, Optional
-
-
-=======
-from typing import Dict, Optional
-
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, OperationalError
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Charger .env en local
 load_dotenv()
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +20,15 @@ def _mask_password(url_obj: URL) -> URL:
         return url_obj
 
     return url_obj.set(password="***")
+
+
+def _format_url_for_log(url_str: str) -> str:
+    """Prépare une URL pour les logs en masquant le mot de passe si possible."""
+
+    try:
+        return str(_mask_password(make_url(url_str)))
+    except ArgumentError:
+        return url_str
 
 
 def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
@@ -55,10 +48,6 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
     }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 def _normalize_host(host: Optional[str]) -> Optional[str]:
     if not host:
         return host
@@ -148,10 +137,6 @@ def _normalize_url(raw_url: str) -> Optional[str]:
         query.pop("channel_binding", None)
         url_obj = url_obj.set(query=query)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     normalized_host = _normalize_host(url_obj.host)
     if normalized_host != url_obj.host:
         url_obj = url_obj.set(host=normalized_host)
@@ -167,10 +152,6 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     return str(url_obj)
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 PLACEHOLDER_SETS = {
     "user": {"USER", "USERNAME"},
     "password": {"PASSWORD"},
@@ -253,49 +234,41 @@ def _build_url_from_parts() -> Optional[str]:
 
 
 def _determine_database_url() -> str:
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     raw_database_url = os.getenv("DATABASE_URL")
     if raw_database_url:
+        logger.info("DATABASE_URL brut fourni: %s", _format_url_for_log(raw_database_url))
         normalized = _normalize_url(raw_database_url)
         if normalized:
+            logger.info(
+                "DATABASE_URL normalisée utilisée: %s",
+                _format_url_for_log(normalized),
+            )
             return normalized
         raise RuntimeError(
             "La variable `DATABASE_URL` est définie mais invalide. Vérifie l'URL collée "
             "depuis Neon/Render (sans le préfixe `psql` ni les quotes)."
         )
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     assembled = _build_url_from_parts()
     if assembled:
-        logger.info("DATABASE_URL assemblée à partir des variables individuelles.")
+        logger.info(
+            "DATABASE_URL assemblée à partir des variables individuelles: %s",
+            _format_url_for_log(assembled),
+        )
         return assembled
 
     raise RuntimeError(
-<<<<<<< HEAD
-
         "La variable `DATABASE_URL` n'est pas définie. Renseigne-la avec l'URL fournie "
         "par Neon ou Render dans les variables d'environnement du service."
-
-=======
-        "La variable `DATABASE_URL` n'est pas définie. Renseigne-la avec l'URL fournie "
-        "par Neon ou Render dans les variables d'environnement du service."
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     )
 
 
 DATABASE_URL = _determine_database_url()
 
-try:
-    _masked = _mask_password(make_url(DATABASE_URL))
-    logger.info("Connexion PostgreSQL configurée vers %s", _masked)
-except ArgumentError:  # pragma: no cover - log defensif
-    logger.info("Connexion PostgreSQL configurée via chaîne brute." )
+logger.info(
+    "Connexion PostgreSQL configurée vers %s",
+    _format_url_for_log(DATABASE_URL),
+)
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -313,7 +286,9 @@ def get_db():
 def describe_active_database() -> Dict[str, Optional[str]]:
     """Retourne les paramètres de connexion utilisés (mot de passe exclu)."""
 
-    return _connection_snapshot(DATABASE_URL)
+    snapshot = _connection_snapshot(DATABASE_URL)
+    snapshot["url"] = _format_url_for_log(DATABASE_URL)
+    return snapshot
 
 
 def check_connection() -> None:
