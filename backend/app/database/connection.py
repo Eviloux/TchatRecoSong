@@ -33,6 +33,7 @@ def _render_url(url_obj: URL, hide_password: bool) -> str:
         if auth:
             auth += "@"
 
+
         host = url_obj.host or ""
         if url_obj.port:
             host = f"{host}:{url_obj.port}"
@@ -43,82 +44,6 @@ def _render_url(url_obj: URL, hide_password: bool) -> str:
             query = "?" + "&".join(f"{k}={v}" for k, v in url_obj.query.items())
 
         return f"{url_obj.drivername}://{auth}{host}{database}{query}"
-
-
-def _mask_password(url_obj: URL) -> str:
-    """Retourne une représentation de l'URL avec mot de passe masqué."""
-
-    return _render_url(url_obj, hide_password=True)
-
-
-def _format_url_for_log(url_str: str) -> str:
-    """Prépare une URL pour les logs en masquant le mot de passe si possible."""
-
-    try:
-        return _mask_password(make_url(url_str))
-    except ArgumentError:
-        return url_str
-
-
-def _log_plain_password(url_str: str) -> None:
-    """Affiche explicitement le mot de passe PostgreSQL pour diagnostic utilisateur."""
-
-    try:
-        url_obj = make_url(url_str)
-    except ArgumentError:
-        logger.warning(
-            "Impossible d'extraire le mot de passe depuis l'URL '%s' : format invalide.",
-            url_str,
-        )
-        return
-
-    password = url_obj.password or ""
-    if password:
-        logger.warning(
-            "Mot de passe PostgreSQL utilisé (à retirer une fois le debug terminé) : %s",
-            password,
-        )
-    else:
-        logger.warning(
-            "Aucun mot de passe PostgreSQL détecté dans l'URL fournie." \
-            " Vérifie la variable d'environnement.",
-        )
-
-
-def _format_url_for_log(url_str: str) -> str:
-    """Prépare une URL pour les logs en masquant le mot de passe si possible."""
-
-    try:
-        return str(_mask_password(make_url(url_str)))
-    except ArgumentError:
-        return url_str
-
-
-
-def _log_plain_password(url_str: str) -> None:
-    """Affiche explicitement le mot de passe PostgreSQL pour diagnostic utilisateur."""
-
-    try:
-        url_obj = make_url(url_str)
-    except ArgumentError:
-        logger.warning(
-            "Impossible d'extraire le mot de passe depuis l'URL '%s' : format invalide.",
-            url_str,
-        )
-        return
-
-    password = url_obj.password or ""
-    if password:
-        logger.warning(
-            "Mot de passe PostgreSQL utilisé (à retirer une fois le debug terminé) : %s",
-            password,
-        )
-    else:
-        logger.warning(
-            "Aucun mot de passe PostgreSQL détecté dans l'URL fournie." \
-            " Vérifie la variable d'environnement.",
-        )
-
 
 
 def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
@@ -344,12 +269,7 @@ def _determine_database_url() -> str:
 
     assembled = _build_url_from_parts()
     if assembled:
-        logger.info(
-            "DATABASE_URL assemblée à partir des variables individuelles: %s",
-            _format_url_for_log(assembled),
-        )
 
-        _log_plain_password(assembled)
         return assembled
 
 
@@ -361,10 +281,9 @@ def _determine_database_url() -> str:
 
 DATABASE_URL = _determine_database_url()
 
-logger.info(
-    "Connexion PostgreSQL configurée vers %s",
-    _format_url_for_log(DATABASE_URL),
-)
+
+logger.info("Connexion PostgreSQL configurée.")
+
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
