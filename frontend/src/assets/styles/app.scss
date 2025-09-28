@@ -118,10 +118,6 @@ body {
     @include card-style;
     display: grid;
     gap: $spacing-medium;
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     justify-items: center;
 
     button {
@@ -142,21 +138,11 @@ body {
       > div {
         width: 100% !important;
       }
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     }
 
     .twitch-login {
       display: inline-flex;
-<<<<<<< HEAD
-
       justify-content: center;
-
-=======
-      justify-content: center;
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
       align-items: center;
       gap: $spacing-small;
       padding: $spacing-small $spacing-large;
