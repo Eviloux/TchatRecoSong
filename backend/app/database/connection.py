@@ -13,6 +13,25 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
+
+def _mask_password_fallback(url: str) -> str:
+    """Mask simple DSN passwords when SQLAlchemy parsing fails."""
+
+    if "@" not in url or "://" not in url:
+        return url
+
+    scheme, remainder = url.split("://", 1)
+    if "@" not in remainder:
+        return url
+
+    credentials, tail = remainder.split("@", 1)
+    if ":" not in credentials:
+        return url
+
+    username = credentials.split(":", 1)[0]
+    return f"{scheme}://{username}:***@{tail}"
+
+
 def _render_url(url_obj: URL, hide_password: bool) -> str:
     """Serialize a SQLAlchemy URL while controlling password masking."""
 
@@ -33,7 +52,6 @@ def _render_url(url_obj: URL, hide_password: bool) -> str:
         if auth:
             auth += "@"
 
-
         host = url_obj.host or ""
         if url_obj.port:
             host = f"{host}:{url_obj.port}"
@@ -46,13 +64,27 @@ def _render_url(url_obj: URL, hide_password: bool) -> str:
         return f"{url_obj.drivername}://{auth}{host}{database}{query}"
 
 
+def _format_url_for_log(url: Optional[str]) -> str:
+    """Mask the password portion of a DSN while keeping it readable."""
+
+    if not url:
+        return "<aucune valeur>"
+
+    try:
+        url_obj = make_url(url)
+    except (ArgumentError, ValueError):
+        return _mask_password_fallback(url)
+
+    return _render_url(url_obj, hide_password=True)
+
+
 def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
     """Expose les principales infos de connexion sans mot de passe."""
 
     try:
         url_obj = make_url(url_str)
     except ArgumentError:
-        return {"raw_url": url_str}
+        return {"raw_url": url_str, "url": _mask_password_fallback(url_str)}
 
     return {
         "drivername": url_obj.drivername,
@@ -61,6 +93,7 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "port": str(url_obj.port) if url_obj.port is not None else None,
         "database": url_obj.database,
         "query": "&".join(f"{k}={v}" for k, v in url_obj.query.items()) or None,
+        "url": _format_url_for_log(url_str),
     }
 
 def _normalize_host(host: Optional[str]) -> Optional[str]:
@@ -166,7 +199,6 @@ def _normalize_url(raw_url: str) -> Optional[str]:
 
     return _render_url(url_obj, hide_password=False)
 
-
 PLACEHOLDER_SETS = {
     "user": {"USER", "USERNAME"},
     "password": {"PASSWORD"},
@@ -252,14 +284,20 @@ def _determine_database_url() -> str:
     raw_database_url = os.getenv("DATABASE_URL")
     if raw_database_url:
         logger.info("DATABASE_URL brut fourni: %s", _format_url_for_log(raw_database_url))
+
+
         normalized = _normalize_url(raw_database_url)
         if normalized:
-            logger.info(
-                "DATABASE_URL normalisée utilisée: %s",
-                _format_url_for_log(normalized),
-            )
-
-            _log_plain_password(normalized)
+            if normalized != raw_database_url:
+                logger.info(
+                    "DATABASE_URL normalisée utilisée: %s",
+                    _format_url_for_log(normalized),
+                )
+            else:
+                logger.info(
+                    "DATABASE_URL utilisée telle que fournie: %s",
+                    _format_url_for_log(normalized),
+                )
 
             return normalized
         raise RuntimeError(
@@ -270,6 +308,10 @@ def _determine_database_url() -> str:
     assembled = _build_url_from_parts()
     if assembled:
 
+        logger.info(
+            "DATABASE_URL reconstruite depuis les variables séparées: %s",
+            _format_url_for_log(assembled),
+        )
         return assembled
 
 
@@ -281,8 +323,9 @@ def _determine_database_url() -> str:
 
 DATABASE_URL = _determine_database_url()
 
-
-logger.info("Connexion PostgreSQL configurée.")
+logger.info(
+    "Connexion PostgreSQL configurée vers %s", _format_url_for_log(DATABASE_URL)
+)
 
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
