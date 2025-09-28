@@ -8,7 +8,9 @@ from typing import Any
 
 import httpx
 import jwt
+
 from jwt import PyJWTError, PyJWK
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -68,7 +70,9 @@ def _load_google_public_key(kid: str) -> Any:
     keys = _fetch_google_keys()
     for jwk in keys:
         if jwk.get("kid") == kid:
+
             return PyJWK.from_dict(jwk).key
+
     raise AdminAuthError("Clé Google introuvable pour le token fourni")
 
 
@@ -110,6 +114,7 @@ def authenticate_google(credential: str) -> tuple[str, str]:
         header = jwt.get_unverified_header(credential)
     except PyJWTError as exc:  # pragma: no cover - token invalide
         raise AdminAuthError("Token Google mal formé") from exc
+
 
     kid = header.get("kid")
     if not kid:

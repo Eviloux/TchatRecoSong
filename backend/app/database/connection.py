@@ -63,6 +63,7 @@ def _render_url(url_obj: URL, hide_password: bool) -> str:
         return f"{url_obj.drivername}://{auth}{host}{database}{query}"
 
 
+
 def _format_url_for_log(url: Optional[str]) -> str:
     """Mask the password portion of a DSN while keeping it readable."""
 
@@ -285,6 +286,7 @@ def _determine_database_url() -> str:
     if raw_database_url:
         logger.info("DATABASE_URL brut fourni: %s", _format_url_for_log(raw_database_url))
 
+
         normalized = _normalize_url(raw_database_url)
         if normalized:
             if normalized != raw_database_url:
@@ -297,6 +299,7 @@ def _determine_database_url() -> str:
                     "DATABASE_URL utilisée telle que fournie: %s",
                     _format_url_for_log(normalized),
                 )
+
             return normalized
         raise RuntimeError(
             "La variable `DATABASE_URL` est définie mais invalide. Vérifie l'URL collée "
@@ -305,11 +308,13 @@ def _determine_database_url() -> str:
 
     assembled = _build_url_from_parts()
     if assembled:
+
         logger.info(
             "DATABASE_URL reconstruite depuis les variables séparées: %s",
             _format_url_for_log(assembled),
         )
         return assembled
+
 
     raise RuntimeError(
         "La variable `DATABASE_URL` n'est pas définie. Renseigne-la avec l'URL fournie "
@@ -322,6 +327,7 @@ DATABASE_URL = _determine_database_url()
 logger.info(
     "Connexion PostgreSQL configurée vers %s", _format_url_for_log(DATABASE_URL)
 )
+
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -339,7 +345,9 @@ def get_db():
 def describe_active_database() -> Dict[str, Optional[str]]:
     """Retourne les paramètres de connexion utilisés (mot de passe exclu)."""
 
-    return _connection_snapshot(DATABASE_URL)
+    snapshot = _connection_snapshot(DATABASE_URL)
+    snapshot["url"] = _format_url_for_log(DATABASE_URL)
+    return snapshot
 
 
 def check_connection() -> None:
