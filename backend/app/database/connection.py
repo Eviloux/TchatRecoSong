@@ -11,44 +11,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Charger .env en local
 load_dotenv()
 
-# TEMP DEBUG: expose les variables d'environnement liées à la base
-_ENV_DEBUG_KEYS = [
-    "DATABASE_URL",
-    "NEON_DATABASE_URL",
-    "DATABASE_INTERNAL_URL",
-    "POSTGRES_INTERNAL_URL",
-    "DATABASE_HOST",
-    "DATABASE_INTERNAL_HOST",
-    "POSTGRES_HOST",
-    "POSTGRES_INTERNAL_HOST",
-    "DATABASE_PORT",
-    "POSTGRES_PORT",
-    "DATABASE_USER",
-    "POSTGRES_USER",
-    "DATABASE_PASSWORD",
-    "POSTGRES_PASSWORD",
-    "DATABASE_NAME",
-    "POSTGRES_DB",
-]
-
-
-def _debug_log_environment_values() -> None:
-    snapshot = {key: os.getenv(key) for key in _ENV_DEBUG_KEYS if os.getenv(key) is not None}
-    if snapshot:
-        logger.warning(
-            "[DEBUG TEMPORAIRE] Variables d'environnement base de données: %s",
-            snapshot,
-        )
-    else:
-        logger.warning(
-            "[DEBUG TEMPORAIRE] Aucune variable de connexion trouvée parmi %s",
-            _ENV_DEBUG_KEYS,
-        )
-
 
 logger = logging.getLogger(__name__)
-
-_debug_log_environment_values()
 
 
 def _mask_password(url_obj: URL) -> URL:
