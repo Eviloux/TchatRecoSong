@@ -13,13 +13,76 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def _mask_password(url_obj: URL) -> URL:
-    """Retourne une URL dont le mot de passe est masqué pour les logs."""
+def _render_url(url_obj: URL, hide_password: bool) -> str:
+    """Serialize a SQLAlchemy URL while controlling password masking."""
 
-    if not url_obj.password:
-        return url_obj
+    try:
+        return url_obj.render_as_string(hide_password=hide_password)
+    except AttributeError:  # pragma: no cover - fallback for older SQLAlchemy
+        legacy_renderer = getattr(url_obj, "__to_string__", None)
+        if callable(legacy_renderer):
+            return legacy_renderer(hide_password=hide_password)
 
-    return url_obj.set(password="***")
+        if hide_password:
+            return str(url_obj)
+
+        # Dernier recours : reconstruction manuelle du DSN sans masquer
+        auth = url_obj.username or ""
+        if url_obj.password:
+            auth = f"{auth}:{url_obj.password}"
+        if auth:
+            auth += "@"
+
+        host = url_obj.host or ""
+        if url_obj.port:
+            host = f"{host}:{url_obj.port}"
+
+        database = f"/{url_obj.database}" if url_obj.database else ""
+        query = ""
+        if url_obj.query:
+            query = "?" + "&".join(f"{k}={v}" for k, v in url_obj.query.items())
+
+        return f"{url_obj.drivername}://{auth}{host}{database}{query}"
+
+
+def _mask_password(url_obj: URL) -> str:
+    """Retourne une représentation de l'URL avec mot de passe masqué."""
+
+    return _render_url(url_obj, hide_password=True)
+
+
+def _format_url_for_log(url_str: str) -> str:
+    """Prépare une URL pour les logs en masquant le mot de passe si possible."""
+
+    try:
+        return _mask_password(make_url(url_str))
+    except ArgumentError:
+        return url_str
+
+
+def _log_plain_password(url_str: str) -> None:
+    """Affiche explicitement le mot de passe PostgreSQL pour diagnostic utilisateur."""
+
+    try:
+        url_obj = make_url(url_str)
+    except ArgumentError:
+        logger.warning(
+            "Impossible d'extraire le mot de passe depuis l'URL '%s' : format invalide.",
+            url_str,
+        )
+        return
+
+    password = url_obj.password or ""
+    if password:
+        logger.warning(
+            "Mot de passe PostgreSQL utilisé (à retirer une fois le debug terminé) : %s",
+            password,
+        )
+    else:
+        logger.warning(
+            "Aucun mot de passe PostgreSQL détecté dans l'URL fournie." \
+            " Vérifie la variable d'environnement.",
+        )
 
 
 def _format_url_for_log(url_str: str) -> str:
@@ -176,7 +239,7 @@ def _normalize_url(raw_url: str) -> Optional[str]:
     if sslmode:
         url_obj = url_obj.set(query={**url_obj.query, "sslmode": sslmode})
 
-    return str(url_obj)
+    return _render_url(url_obj, hide_password=False)
 
 
 PLACEHOLDER_SETS = {
@@ -257,7 +320,7 @@ def _build_url_from_parts() -> Optional[str]:
         database=database,
         query=query,
     )
-    return str(url)
+    return _render_url(url, hide_password=False)
 
 
 def _determine_database_url() -> str:
@@ -287,8 +350,8 @@ def _determine_database_url() -> str:
         )
 
         _log_plain_password(assembled)
-
         return assembled
+
 
     raise RuntimeError(
         "La variable `DATABASE_URL` n'est pas définie. Renseigne-la avec l'URL fournie "
