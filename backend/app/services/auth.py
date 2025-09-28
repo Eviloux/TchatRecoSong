@@ -112,6 +112,7 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     except PyJWTError as exc:  # pragma: no cover - token invalide
         raise AdminAuthError("Token Google mal formé") from exc
 
+
     kid = header.get("kid")
     if not kid:
         raise AdminAuthError("Token Google mal formé")
