@@ -6,11 +6,5 @@ pydantic
 python-dotenv
 python-multipart
 httpx
-<<<<<<< HEAD
-
 requests
-
-=======
-requests
->>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 PyJWT
