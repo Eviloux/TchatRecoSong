@@ -3,12 +3,60 @@
 @use 'variables' as vars;
 @use 'mixins' as mixins;
 
-.song-card {
-  @include mixins.card-style;
-  margin-bottom: vars.$spacing-medium;
+.song-list {
+  margin-top: vars.$spacing-large;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: vars.$spacing-medium;
+
+    button {
+      @include mixins.button-style;
+    }
+  }
+
+  &__items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: vars.$spacing-medium;
+  }
+
+  &__empty {
+    color: vars.$muted-color;
+  }
 }
 
-.song-title {
-  font-weight: bold;
-  color: vars.$primary-color;
+.song-card {
+  @include mixins.card-style;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+
+    h3 {
+      margin: 0 0 vars.$spacing-small;
+      color: vars.$primary-color;
+    }
+
+    .artist {
+      margin: 0 0 vars.$spacing-small;
+      color: vars.$muted-color;
+    }
+
+    a {
+      color: vars.$accent-color;
+      text-decoration: none;
+    }
+  }
+
+  .votes {
+    font-weight: bold;
+  }
 }

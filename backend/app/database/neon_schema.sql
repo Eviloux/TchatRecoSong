@@ -24,3 +24,4 @@ CREATE TABLE IF NOT EXISTS ban_rules (
 CREATE INDEX IF NOT EXISTS idx_ban_rules_title ON ban_rules (title);
 CREATE INDEX IF NOT EXISTS idx_ban_rules_artist ON ban_rules (artist);
 CREATE INDEX IF NOT EXISTS idx_ban_rules_link ON ban_rules (link);
+
