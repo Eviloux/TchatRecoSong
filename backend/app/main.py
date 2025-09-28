@@ -11,21 +11,28 @@ from app.database.connection import Base, check_connection, describe_active_data
 
 logger = logging.getLogger(__name__)
 
-# Créer la DB si elle n’existe pas
-try:
-    check_connection()
-    Base.metadata.create_all(bind=engine)
-except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécution
-    snapshot = describe_active_database()
-    logger.error(
-        "Échec de connexion PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
-    )
-    raise RuntimeError(
-        "Connexion à la base de données impossible. Vérifie la variable `DATABASE_URL` "
-        "et les identifiants configurés sur Render ou Neon."
-    ) from exc
+
 
 app = FastAPI(title="Twitch Song Recommender")
+
+
+@app.on_event("startup")
+async def startup_checks() -> None:
+    """Vérifie la connexion PostgreSQL sans bloquer le démarrage du backend."""
+
+    try:
+        check_connection()
+    except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécution
+        snapshot = describe_active_database()
+        logger.error(
+            "Échec de connexion à PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
+        )
+        logger.warning(
+            "Le backend démarre sans base de données active : les routes dépendantes "
+            "échoueront tant que la connexion n'est pas rétablie."
+        )
+    else:
+        Base.metadata.create_all(bind=engine)
 
 # Middleware CORS
 app.add_middleware(
