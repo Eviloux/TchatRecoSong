@@ -7,7 +7,10 @@ from sqlalchemy.exc import OperationalError
 from app.config import CORS_ORIGINS
 from app.api.routes import songs, ban_rules, public_submissions, auth
 from app import models  # noqa: F401 - ensure models are imported before create_all
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 from app.database.connection import Base, check_connection, describe_active_database, engine
 
 logger = logging.getLogger(__name__)
@@ -21,10 +24,15 @@ except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécut
     logger.error(
         "Échec de connexion PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
     )
+<<<<<<< HEAD
 
     raise RuntimeError(
         "Connexion à la base de données impossible. Vérifie la variable `DATABASE_URL` "
 
+=======
+    raise RuntimeError(
+        "Connexion à la base de données impossible. Vérifie la variable `DATABASE_URL` "
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
         "et les identifiants configurés sur Render ou Neon."
     ) from exc
 

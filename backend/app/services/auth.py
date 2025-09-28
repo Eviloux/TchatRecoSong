@@ -57,7 +57,10 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     if not GOOGLE_CLIENT_ID:
         raise AdminAuthError("GOOGLE_CLIENT_ID non configuré")
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     token_info_url = "https://oauth2.googleapis.com/tokeninfo"
     params = {"id_token": credential}
     with httpx.Client(timeout=5.0) as client:
@@ -77,7 +80,10 @@ def authenticate_google(credential: str) -> tuple[str, str]:
         raise AdminAuthError("Adresse non autorisée", status.HTTP_403_FORBIDDEN)
 
     name = idinfo.get("name") or email or "Google Admin"
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
     subject = f"google:{idinfo.get('sub')}"
     token = issue_admin_token(subject=subject, name=name, provider="google")
     return token, name

@@ -13,7 +13,10 @@ soumission, portail `/submit`, redirection du routeur Vue, etc.). Si tu
 viens de fusionner ou de déployer, assure-toi que le service Render
 utilise bien cette révision.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 Twitch interdit d'envoyer des liens cliquables directement dans le tchat. Le bot
 `!reco` doit donc se contenter d'afficher l'URL publique de la page "utilisateur"
 hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com/submit`). Les viewers y collent
@@ -33,15 +36,23 @@ Ton projet est déjà relié à une base Neon. Quand tu actives l'intégration G
 3. Renseigne `DATABASE_URL` comme nom, et colle l'URL Neon nettoyée (voir remarques ci-dessous) comme valeur.
 4. Clique sur **Save Changes**, puis déclenche un redéploiement via **Manual Deploy > Deploy latest commit** pour que la nouvelle URL soit prise en compte.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 > ❌ Neon affiche parfois un suffixe `&channel_binding=require`. Supprime-le : libpq/psycopg2 utilisé sur Render ne gère pas cette option et échouera avec une erreur d'authentification. Garde simplement `?sslmode=require` dans l'URL finale.
 
 > ⚠️ Neon affiche souvent un exemple sous la forme `psql 'postgresql://...'`. Ne recopie que la partie `postgresql://…` (sans le préfixe `psql` ni les quotes), sinon la connexion échouera.
 
+<<<<<<< HEAD
 
 > 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Tu peux alors définir `DATABASE_USER`, `DATABASE_PASSWORD`, etc. en local : le backend reconstruira automatiquement `DATABASE_URL` à partir de ces valeurs.
 
 
+=======
+> 💡  Si tu préfères utiliser les champs détaillés (hôte, port, utilisateur…), Neon les expose aussi depuis l'onglet **Connection Details**. Tu peux alors définir `DATABASE_USER`, `DATABASE_PASSWORD`, etc. en local : le backend reconstruira automatiquement `DATABASE_URL` à partir de ces valeurs.
+
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 Pour initialiser les tables (`songs`, `ban_rules`) dans Neon, exécute le script SQL `backend/app/database/neon_schema.sql` via l'interface SQL Neon ou avec `psql`.
 
 ### Vérifier ta configuration localement
@@ -58,7 +69,10 @@ La commande exécute un `SELECT 1` sur la base ciblée et affiche les paramètre
 ### Utilisation avec Render PostgreSQL
 
 - Render fournit plusieurs variables système, mais **seule** `DATABASE_URL` est lue par le backend. Assure-toi de mettre cette clé à jour dans l'onglet **Environment** après chaque rotation de mot de passe.
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 - Si tu renseignes manuellement les champs (`DATABASE_HOST`, `DATABASE_PORT`, ...), assure-toi que le nom d'hôte contient bien le domaine complet (ex. `dpg-...frankfurt-postgres.render.com`). L'erreur `could not translate host name` indiquée par SQLAlchemy signifie que l'hôte est tronqué.
 - Un champ `sslmode` sera ajouté automatiquement (valeur `require` par défaut) si aucun paramètre n'est précisé. Tu peux le forcer via `DATABASE_SSLMODE=require` si ton hébergeur n'ajoute pas ce paramètre à l'URL.
 
@@ -66,6 +80,7 @@ La commande exécute un `SELECT 1` sur la base ciblée et affiche les paramètre
 
 Chaque dossier (`backend/`, `frontend/`) contient un fichier `.env.example` à
 copier en `.env` puis à personnaliser avant de lancer l'application ou de créer
+<<<<<<< HEAD
 les variables d'environnement sur Render. Chaque clé est commentée directement
 dans ces fichiers, mais voici un rappel synthétique :
 
@@ -74,6 +89,15 @@ dans ces fichiers, mais voici un rappel synthétique :
 
 | `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. C'est la seule clé lue par le backend en production. |
 
+=======
+les variables d'environnement sur Render. Les fichiers `.env` réels ne sont pas
+versionnés : garde-les en local (ou sur Render) et ne les commits pas. Chaque clé
+est commentée directement dans ces fichiers, mais voici un rappel synthétique :
+
+| Variable | À renseigner avec... |
+| --- | --- |
+| `DATABASE_URL` | L'URL PostgreSQL fournie par Render (ou Neon) pour la base de données. C'est la seule clé lue par le backend en production. |
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 | `CORS_ORIGINS` | Les domaines autorisés à appeler l'API, séparés par des virgules. |
 | `ADMIN_JWT_SECRET` | Une chaîne secrète longue et aléatoire pour signer les JWT admin. |
 | `ADMIN_TOKEN_TTL_MINUTES` | Durée de validité des tokens admin (720 = 12 h). |
@@ -91,7 +115,10 @@ dans ces fichiers, mais voici un rappel synthétique :
 > les clients OAuth et les listes d'administrateurs). Un mot de passe erroné côté Neon ou Render
 > provoquera un arrêt immédiat du backend.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/codex/find-the-best-solution-to-retrieve-chat-command-wlivcu
 ### URLs frontend prêtes à l'emploi
 
 - Portail public (viewers) : `https://tchatrecosong-front.onrender.com/submit`
