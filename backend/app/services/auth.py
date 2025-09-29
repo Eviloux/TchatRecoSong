@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 import time
@@ -11,7 +10,9 @@ import httpx
 import jwt
 
 from jwt import PyJWTError, PyJWK
-from jwt.algorithms import RSAAlgorithm
+
+from jwt.exceptions import MissingRequiredClaimError
+
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -89,15 +90,15 @@ def _fetch_google_keys() -> list[dict]:
 
 def _load_google_public_key(kid: str) -> Any:
     keys = _fetch_google_keys()
-    for jwk in keys:
-        if jwk.get("kid") == kid:
+    for jwk_data in keys:
+        if jwk_data.get("kid") == kid:
             logger.debug("Clé publique trouvée pour kid=%s", kid)
-
             try:
-                if isinstance(jwk, PyJWK):
-                    return jwk.key
+                if isinstance(jwk_data, PyJWK):
+                    return jwk_data.key
 
-                return RSAAlgorithm.from_jwk(json.dumps(jwk))
+                return PyJWK.from_dict(jwk_data).key
+
             except (PyJWTError, ValueError, TypeError) as exc:  # pragma: no cover - dépend du format de la clé
                 logger.exception("Échec du chargement de la clé Google (kid=%s)", kid)
                 raise AdminAuthError("Clé Google invalide") from exc
@@ -189,6 +190,15 @@ def authenticate_google(credential: str) -> tuple[str, str]:
             kid,
         )
         raise AdminAuthError("Client Google non autorisé")
+
+    except MissingRequiredClaimError as exc:
+        logger.warning(
+            "Claim Google manquant (%s) pour kid=%s",
+            exc.claim,
+            kid,
+        )
+        raise AdminAuthError("Token Google incomplet") from exc
+
     except PyJWTError as exc:  # pragma: no cover - dépend du token reçu
         logger.exception("Échec du décodage du token Google (kid=%s)", kid)
         raise AdminAuthError("Token Google invalide") from exc
