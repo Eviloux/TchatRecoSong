@@ -38,6 +38,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 logger = logging.getLogger("uvicorn.error").getChild(__name__)
 
 
+
 class AdminAuthError(HTTPException):
     def __init__(self, detail: str, status_code: int = status.HTTP_401_UNAUTHORIZED) -> None:
         super().__init__(status_code=status_code, detail=detail)
@@ -176,11 +177,13 @@ def authenticate_google(credential: str) -> tuple[str, str]:
         raise AdminAuthError("Token Google invalide") from exc
 
     if idinfo.get("iss") not in GOOGLE_ISSUERS:
+
         logger.warning(
             "Émetteur Google invalide (iss=%s, kid=%s)",
             idinfo.get("iss"),
             kid,
         )
+
         raise AdminAuthError("Émetteur Google invalide")
 
     email = idinfo.get("email")
