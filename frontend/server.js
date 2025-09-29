@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import { parse } from 'url';
 import { extname, join, dirname } from 'path';
-import { createReadStream, existsSync } from 'fs';
+import { createReadStream, existsSync, lstatSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,9 +30,13 @@ function getContentType(filePath) {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
-function sendFile(res, filePath, status = 200) {
+function sendFile(req, res, filePath, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', getContentType(filePath));
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
   createReadStream(filePath).pipe(res);
 }
 
@@ -57,10 +61,17 @@ const server = createServer(async (req, res) => {
   const normalized = decodedPath.replace(/^\/+/, '');
   const hasExtension = extname(normalized) !== '';
   const candidate = join(distDir, normalized || 'index.html');
+  const fileExists = existsSync(candidate) && lstatSync(candidate).isFile();
+  const acceptsHtml = (req.headers.accept ?? '').includes('text/html');
 
   try {
-    if (hasExtension && existsSync(candidate)) {
-      sendFile(res, candidate);
+    if (hasExtension && fileExists) {
+      sendFile(req, res, candidate);
+      return;
+    }
+
+    if (!hasExtension || acceptsHtml) {
+      sendFile(req, res, indexPath);
       return;
     }
 
@@ -69,8 +80,6 @@ const server = createServer(async (req, res) => {
       res.end('Not Found');
       return;
     }
-
-    sendFile(res, indexPath);
   } catch (err) {
     res.statusCode = 500;
     res.end('Internal Server Error');
