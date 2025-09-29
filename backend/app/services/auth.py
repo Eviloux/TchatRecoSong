@@ -128,16 +128,17 @@ def authenticate_google(credential: str) -> tuple[str, str]:
             public_key,
             algorithms=["RS256"],
             audience=GOOGLE_CLIENT_ID,
-            issuer=list(GOOGLE_ISSUERS),
+            options={"verify_iss": False},
         )
     except jwt.ExpiredSignatureError:
         raise AdminAuthError("Token Google expiré")
     except jwt.InvalidAudienceError:
         raise AdminAuthError("Client Google non autorisé")
-    except jwt.InvalidIssuerError:
-        raise AdminAuthError("Émetteur Google invalide")
     except PyJWTError as exc:  # pragma: no cover - dépend du token reçu
         raise AdminAuthError("Token Google invalide") from exc
+
+    if idinfo.get("iss") not in GOOGLE_ISSUERS:
+        raise AdminAuthError("Émetteur Google invalide")
 
     email = idinfo.get("email")
     if ALLOWED_GOOGLE_EMAILS and email not in ALLOWED_GOOGLE_EMAILS:
