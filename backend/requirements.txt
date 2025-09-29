@@ -8,3 +8,4 @@ python-multipart
 httpx
 requests
 PyJWT
+cryptography

@@ -25,7 +25,7 @@
 
     <p v-if="feedback" class="feedback" :class="feedbackType">{{ feedback }}</p>
 
-    <SongList ref="songListRef" />
+    <SongList ref="songListRef" allow-voting />
   </section>
 </template>
 
