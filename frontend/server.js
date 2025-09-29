@@ -57,21 +57,22 @@ const server = createServer(async (req, res) => {
 
   const { pathname } = parse(req.url);
   const safePath = pathname?.replace(/\.\./g, '') || '/';
+  const decodedPath = decodeURIComponent(safePath);
 
-  if (safePath === '/') {
+  if (decodedPath === '/') {
     res.statusCode = 302;
     res.setHeader('Location', '/submit');
     setCommonHeaders(res);
     res.end();
     return;
   }
+  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
 
-  if (safePath === '/admin') {
     sendFile(req, res, indexPath);
     return;
   }
 
-  const decodedPath = decodeURIComponent(safePath);
+
   const normalized = decodedPath.replace(/^\/+/, '');
   const hasExtension = extname(normalized) !== '';
   const candidate = join(distDir, normalized || 'index.html');
