@@ -12,8 +12,6 @@ import jwt
 from jwt import PyJWTError, PyJWK
 from jwt.exceptions import MissingRequiredClaimError
 
-from jwt.exceptions import MissingRequiredClaimError
-
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -39,7 +37,6 @@ bearer_scheme = HTTPBearer(auto_error=False)
 # même lorsqu'elle est exécutée derrière Uvicorn/Gunicorn.  On rattache donc le logger
 # au logger "uvicorn.error" qui est déjà configuré par le serveur HTTP.
 logger = logging.getLogger("uvicorn.error").getChild(__name__)
-
 
 
 class AdminAuthError(HTTPException):

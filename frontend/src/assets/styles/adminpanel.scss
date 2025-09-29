@@ -54,4 +54,10 @@
       justify-self: flex-start;
     }
   }
+
+  .form-error {
+    margin-top: vars.$spacing-small;
+    color: vars.$accent-color;
+    font-weight: 600;
+  }
 }

@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
 from app.models.song import Song
 from app.schemas.song import SongCreate
 from app.crud import ban_rule
@@ -12,18 +11,25 @@ def add_or_increment_song(db: Session, song_data: SongCreate):
     title_norm = normalize(song_data.title)
     artist_norm = normalize(song_data.artist)
 
-    song = db.query(Song).filter(
-        or_(
-            Song.link == song_data.link,
-            (func.lower(func.replace(func.replace(Song.title, ' ', ''), '-', '')) == title_norm) &
-            (func.lower(func.replace(func.replace(Song.artist, ' ', ''), '-', '')) == artist_norm)
-        )
-    ).first()
+    song = None
 
-    if song:
+    if song_data.link:
+        song = db.query(Song).filter(Song.link == song_data.link).first()
+
+    if song is None:
+        candidates = db.query(Song).all()
+        for candidate in candidates:
+            if (
+                normalize(candidate.title or "") == title_norm
+                and normalize(candidate.artist or "") == artist_norm
+            ):
+                song = candidate
+                break
+
+    if song is not None:
         song.votes += 1
     else:
-        song = Song(**song_data.dict())
+        song = Song(**song_data.model_dump())
         db.add(song)
 
     db.commit()
@@ -32,3 +38,24 @@ def add_or_increment_song(db: Session, song_data: SongCreate):
 
 def get_all_songs(db: Session):
     return db.query(Song).order_by(Song.votes.desc()).all()
+
+
+def delete_song(db: Session, song_id: int) -> bool:
+    song = db.query(Song).filter(Song.id == song_id).first()
+    if not song:
+        return False
+
+    db.delete(song)
+    db.commit()
+    return True
+
+
+def increment_vote(db: Session, song_id: int):
+    song = db.query(Song).filter(Song.id == song_id).first()
+    if not song:
+        return None
+
+    song.votes += 1
+    db.commit()
+    db.refresh(song)
+    return song

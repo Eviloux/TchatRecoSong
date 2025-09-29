@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter
 
+from app.config import GOOGLE_CLIENT_ID, TWITCH_CLIENT_ID
 from app.services.auth import authenticate_google, authenticate_twitch, AdminAuthError
 
 router = APIRouter()
@@ -33,3 +34,13 @@ def login_twitch(payload: dict) -> dict:
     token, name = authenticate_twitch(access_token)
     logger.info("Authentification Twitch terminée pour %s", name)
     return {"token": token, "provider": "twitch", "name": name}
+
+
+@router.get("/config")
+def auth_config() -> dict:
+    """Expose les identifiants publics nécessaires aux clients front."""
+
+    return {
+        "google_client_id": GOOGLE_CLIENT_ID,
+        "twitch_client_id": TWITCH_CLIENT_ID,
+    }

@@ -27,20 +27,21 @@
         <span class="label">Login with Twitch</span>
       </button>
       <p class="login-hint">
-        Configurez les variables <code>VITE_GOOGLE_CLIENT_ID</code> et <code>VITE_TWITCH_CLIENT_ID</code> si nécessaire.
+        Les identifiants OAuth sont récupérés automatiquement auprès de l'API. Vérifiez la configuration
+        Render si les boutons n'apparaissent pas.
       </p>
     </div>
 
     <div v-else class="admin-content">
       <button type="button" class="logout" @click="logout">Se déconnecter</button>
-      <SongList />
-      <AdminPanel :token="token" />
+      <SongList ref="songListRef" :token="token" />
+      <AdminPanel :token="token" @ban-rule-created="handleBanRuleCreated" />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
 
@@ -49,6 +50,10 @@ interface AdminProfile {
   provider: string;
 }
 
+type SongListHandle = {
+  refresh: () => Promise<void> | void;
+};
+
 declare global {
   interface Window {
     google?: any;
@@ -56,13 +61,14 @@ declare global {
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const twitchClientId = import.meta.env.VITE_TWITCH_CLIENT_ID;
+const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
 const token = ref<string | null>(localStorage.getItem('admin_token'));
 const storedProfile = localStorage.getItem('admin_profile');
 const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
 const error = ref('');
+const songListRef = ref<SongListHandle | null>(null);
 
 const storeSession = (authToken: string, provider: string, name: string) => {
   token.value = authToken;
@@ -76,6 +82,12 @@ const logout = () => {
   profile.value = null;
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_profile');
+};
+
+const handleBanRuleCreated = async () => {
+  if (songListRef.value) {
+    await songListRef.value.refresh();
+  }
 };
 
 const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
@@ -104,12 +116,23 @@ const handleGoogleCredential = async (response: any) => {
   await callAuthEndpoint('google', { credential: response.credential });
 };
 
-const initGoogle = () => {
-  if (!googleClientId || !window.google) return;
-  window.google.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleCredential });
+let googleInitTimer: number | null = null;
+
+const ensureGoogleButton = async () => {
+  if (!googleClientId.value || !window.google?.accounts?.id) {
+    return;
+  }
+
+  await nextTick();
   const container = document.getElementById('google-login');
-  if (!container) return;
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '';
   const width = Math.min(container.offsetWidth || 320, 320);
+  window.google.accounts.id.initialize({ client_id: googleClientId.value, callback: handleGoogleCredential });
+
   window.google.accounts.id.renderButton(container, {
     theme: 'outline',
     size: 'large',
@@ -119,15 +142,30 @@ const initGoogle = () => {
   });
 };
 
+const scheduleGoogleInitRetry = () => {
+  if (googleInitTimer !== null) {
+    return;
+  }
+  googleInitTimer = window.setInterval(() => {
+    if (window.google?.accounts?.id) {
+      ensureGoogleButton();
+      if (googleInitTimer !== null) {
+        window.clearInterval(googleInitTimer);
+        googleInitTimer = null;
+      }
+    }
+  }, 250);
+};
+
 const loginWithTwitch = () => {
   error.value = '';
-  if (!twitchClientId) {
+  if (!twitchClientId.value) {
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
   const redirectUri = `${window.location.origin}/admin`;
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
-  url.searchParams.set('client_id', twitchClientId);
+  url.searchParams.set('client_id', twitchClientId.value);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'token');
   url.searchParams.set('scope', 'user:read:email');
@@ -144,8 +182,39 @@ const checkTwitchRedirect = async () => {
   }
 };
 
+const fetchAuthConfig = async () => {
+  if (!API_URL) return;
+  try {
+    const response = await fetch(`${API_URL}/auth/config`);
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.google_client_id) {
+      googleClientId.value = data.google_client_id;
+    }
+    if (data.twitch_client_id) {
+      twitchClientId.value = data.twitch_client_id;
+    }
+  } catch (err) {
+    console.error('Impossible de récupérer la configuration auth', err);
+  }
+};
+
+watch(googleClientId, () => {
+  ensureGoogleButton();
+  scheduleGoogleInitRetry();
+});
+
 onMounted(async () => {
-  initGoogle();
+  scheduleGoogleInitRetry();
+  await fetchAuthConfig();
   await checkTwitchRedirect();
+  ensureGoogleButton();
+});
+
+onBeforeUnmount(() => {
+  if (googleInitTimer !== null) {
+    window.clearInterval(googleInitTimer);
+    googleInitTimer = null;
+  }
 });
 </script>

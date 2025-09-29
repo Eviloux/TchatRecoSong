@@ -10,7 +10,42 @@ logger = logging.getLogger(__name__)
 
 
 def _split_env(value: str) -> list[str]:
-    return [item.strip() for item in value.split(",") if item.strip()]
+    sanitized = []
+    for item in value.split(","):
+        cleaned = item.strip()
+        if not cleaned:
+            continue
+        # Les origines CORS ne doivent pas conserver la barre oblique finale.
+        sanitized.append(cleaned.rstrip("/"))
+    return sanitized
+
+
+def _mask_secret(value: str | None, keep: int = 4) -> str | None:
+    if not value:
+        return value
+    if len(value) <= keep:
+        return "*" * len(value)
+    return value[:keep] + "*" * (len(value) - keep)
+
+
+def _format_env_value(value: str | None, mask: bool = False) -> str:
+    if value is None:
+        return "<non défini>"
+    if mask:
+        return _mask_secret(value) or "<non défini>"
+    return value
+
+
+def _log_env_value(name: str, value: str | None, mask: bool = False) -> None:
+    logger.info("%s (env): %s", name, _format_env_value(value, mask=mask))
+
+
+def _log_collection(name: str, values: Iterable[str]) -> None:
+    values_list = list(values)
+    if values_list:
+        logger.info("%s interprétée: %s", name, values_list)
+    else:
+        logger.info("%s interprétée: <vide>", name)
 
 
 def _mask_secret(value: str | None, keep: int = 4) -> str | None:

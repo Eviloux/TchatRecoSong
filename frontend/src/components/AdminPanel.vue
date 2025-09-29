@@ -29,6 +29,7 @@
       </div>
       <button type="submit">Ajouter une règle</button>
     </form>
+    <p v-if="formError" class="form-error">{{ formError }}</p>
   </section>
 </template>
 
@@ -43,9 +44,11 @@ interface BanRule {
 }
 
 const props = defineProps<{ token: string | null }>();
+const emit = defineEmits<{ (e: 'ban-rule-created'): void }>();
 const API_URL = import.meta.env.VITE_API_URL;
 const banRules = ref<BanRule[]>([]);
 const form = reactive({ title: '', artist: '', link: '' });
+const formError = ref('');
 
 const fetchBanRules = async () => {
   if (!API_URL) return;
@@ -60,6 +63,17 @@ const fetchBanRules = async () => {
 
 const submit = async () => {
   if (!props.token || !API_URL) return;
+  const payload = {
+    title: form.title.trim() || null,
+    artist: form.artist.trim() || null,
+    link: form.link.trim() || null,
+  };
+
+  if (!payload.title && !payload.artist && !payload.link) {
+    formError.value = 'Renseignez au moins un champ pour créer une règle.';
+    return;
+  }
+
   try {
     const response = await fetch(`${API_URL}/ban/`, {
       method: 'POST',
@@ -67,15 +81,18 @@ const submit = async () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${props.token}`,
       },
-      body: JSON.stringify({ ...form }),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error('Erreur lors de la création.');
     form.title = '';
     form.artist = '';
     form.link = '';
+    formError.value = '';
     await fetchBanRules();
+    emit('ban-rule-created');
   } catch (error) {
     console.error(error);
+    formError.value = "Impossible d'ajouter cette règle.";
   }
 };
 
