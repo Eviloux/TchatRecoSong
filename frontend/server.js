@@ -30,9 +30,17 @@ function getContentType(filePath) {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
+
+function setCommonHeaders(res) {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+}
+
 function sendFile(req, res, filePath, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', getContentType(filePath));
+  setCommonHeaders(res);
+
   if (req.method === 'HEAD') {
     res.end();
     return;
@@ -53,7 +61,13 @@ const server = createServer(async (req, res) => {
   if (safePath === '/') {
     res.statusCode = 302;
     res.setHeader('Location', '/submit');
+    setCommonHeaders(res);
     res.end();
+    return;
+  }
+
+  if (safePath === '/admin') {
+    sendFile(req, res, indexPath);
     return;
   }
 
@@ -76,12 +90,14 @@ const server = createServer(async (req, res) => {
     }
 
     if (hasExtension) {
+      setCommonHeaders(res);
       res.statusCode = 404;
       res.end('Not Found');
       return;
     }
   } catch (err) {
     res.statusCode = 500;
+    setCommonHeaders(res);
     res.end('Internal Server Error');
     console.error('Failed to serve request', err);
   }

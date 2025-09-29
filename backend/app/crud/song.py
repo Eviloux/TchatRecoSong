@@ -3,16 +3,7 @@ from sqlalchemy import or_, func
 from app.models.song import Song
 from app.schemas.song import SongCreate
 from app.crud import ban_rule
-import unicodedata
-import re
-
-def normalize(text: str) -> str:
-    if not text:
-        return ""
-    text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8')
-    text = text.lower()
-    text = re.sub(r'[^a-z0-9]', '', text)
-    return text
+from app.utils.text import normalize
 
 def add_or_increment_song(db: Session, song_data: SongCreate):
     if ban_rule.is_banned(db, song_data.title, song_data.artist, song_data.link):

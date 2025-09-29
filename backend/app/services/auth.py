@@ -10,6 +10,7 @@ import httpx
 import jwt
 
 from jwt import PyJWTError, PyJWK
+from jwt.exceptions import MissingRequiredClaimError
 
 from jwt.exceptions import MissingRequiredClaimError
 
