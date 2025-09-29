@@ -28,7 +28,6 @@ def _format_env_value(value: str | None, mask: bool = False) -> str:
         return _mask_secret(value) or "<non défini>"
     return value
 
-
 def _log_env_value(name: str, value: str | None, mask: bool = False) -> None:
     logger.info("%s (env): %s", name, _format_env_value(value, mask=mask))
 
@@ -43,6 +42,7 @@ def _log_collection(name: str, values: Iterable[str]) -> None:
 
 # Liste des origines autorisées pour CORS
 _default_cors = "https://tchatrecosong-front.onrender.com,http://localhost:5173"
+
 _raw_cors = os.getenv("CORS_ORIGINS")
 _effective_cors = _raw_cors if _raw_cors is not None else _default_cors
 CORS_ORIGINS = _split_env(_effective_cors)

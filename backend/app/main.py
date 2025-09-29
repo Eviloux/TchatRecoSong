@@ -34,6 +34,8 @@ async def startup_checks() -> None:
     else:
         Base.metadata.create_all(bind=engine)
 
+    log_environment_configuration()
+
 # Middleware CORS
 app.add_middleware(
     CORSMiddleware,
