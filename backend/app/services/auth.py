@@ -32,7 +32,11 @@ _GOOGLE_KEYS_EXPIRATION: float = 0.0
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-logger = logging.getLogger(__name__)
+# Les logs d'authentification doivent apparaître dans la sortie standard de l'application
+# même lorsqu'elle est exécutée derrière Uvicorn/Gunicorn.  On rattache donc le logger
+# au logger "uvicorn.error" qui est déjà configuré par le serveur HTTP.
+logger = logging.getLogger("uvicorn.error").getChild(__name__)
+
 
 
 class AdminAuthError(HTTPException):

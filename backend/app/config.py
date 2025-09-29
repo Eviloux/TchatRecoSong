@@ -28,6 +28,7 @@ def _format_env_value(value: str | None, mask: bool = False) -> str:
         return _mask_secret(value) or "<non défini>"
     return value
 
+
 def _log_env_value(name: str, value: str | None, mask: bool = False) -> None:
     logger.info("%s (env): %s", name, _format_env_value(value, mask=mask))
 
