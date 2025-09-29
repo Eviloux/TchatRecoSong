@@ -18,6 +18,8 @@ app = FastAPI(title="Twitch Song Recommender")
 async def startup_checks() -> None:
     """Vérifie la connexion PostgreSQL sans bloquer le démarrage du backend."""
 
+    log_environment_configuration()
+
     try:
         check_connection()
     except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécution
