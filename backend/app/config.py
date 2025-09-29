@@ -48,8 +48,10 @@ def _log_collection(name: str, values: Iterable[str]) -> None:
         logger.info("%s interprétée: <vide>", name)
 
 
+
 # Liste des origines autorisées pour CORS
 _default_cors = "https://tchatrecosong-front.onrender.com,http://localhost:5173"
+
 _raw_cors = os.getenv("CORS_ORIGINS")
 _effective_cors = _raw_cors if _raw_cors is not None else _default_cors
 CORS_ORIGINS = _split_env(_effective_cors)

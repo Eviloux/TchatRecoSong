@@ -132,6 +132,7 @@ const ensureGoogleButton = async () => {
   container.innerHTML = '';
   const width = Math.min(container.offsetWidth || 320, 320);
   window.google.accounts.id.initialize({ client_id: googleClientId.value, callback: handleGoogleCredential });
+
   window.google.accounts.id.renderButton(container, {
     theme: 'outline',
     size: 'large',

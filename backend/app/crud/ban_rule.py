@@ -42,6 +42,7 @@ def _apply_rule_to_existing_songs(db: Session, rule: BanRule) -> None:
         )
 
 
+
 def add_ban_rule(db: Session, rule: BanRuleCreate):
     db_rule = BanRule(**rule.model_dump())
     db.add(db_rule)
