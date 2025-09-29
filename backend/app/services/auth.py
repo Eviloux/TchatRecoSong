@@ -38,6 +38,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 logger = logging.getLogger("uvicorn.error").getChild(__name__)
 
 
+
 class AdminAuthError(HTTPException):
     def __init__(self, detail: str, status_code: int = status.HTTP_401_UNAUTHORIZED) -> None:
         super().__init__(status_code=status_code, detail=detail)
@@ -60,12 +61,14 @@ def _fetch_google_keys() -> list[dict]:
             response.raise_for_status()
     except httpx.HTTPError as exc:  # pragma: no cover - dépend d'un service externe
         logger.exception("Échec lors de la récupération des clés Google")
+
         raise AdminAuthError("Impossible de vérifier le token Google") from exc
 
     try:
         data = response.json()
     except ValueError as exc:  # pragma: no cover - dépend de la réponse Google
         logger.exception("Réponse JWKS Google illisible")
+
         raise AdminAuthError("Impossible de vérifier le token Google") from exc
 
     keys = data.get("keys", [])
@@ -88,11 +91,13 @@ def _load_google_public_key(kid: str) -> Any:
     for jwk in keys:
         if jwk.get("kid") == kid:
             logger.debug("Clé publique trouvée pour kid=%s", kid)
+
             try:
                 return PyJWK.from_dict(jwk).key
             except PyJWTError as exc:  # pragma: no cover - dépend du format de la clé
                 logger.exception("Échec du chargement de la clé Google (kid=%s)", kid)
                 raise AdminAuthError("Clé Google invalide") from exc
+
 
     logger.warning("Aucune clé Google ne correspond au kid fourni (kid=%s)", kid)
     raise AdminAuthError("Clé Google introuvable pour le token fourni")
@@ -193,6 +198,16 @@ def authenticate_google(credential: str) -> tuple[str, str]:
             idinfo.get("iss"),
             kid,
         )
+        raise AdminAuthError("Émetteur Google invalide")
+
+    if idinfo.get("iss") not in GOOGLE_ISSUERS:
+
+        logger.warning(
+            "Émetteur Google invalide (iss=%s, kid=%s)",
+            idinfo.get("iss"),
+            kid,
+        )
+
         raise AdminAuthError("Émetteur Google invalide")
 
     email = idinfo.get("email")
