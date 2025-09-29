@@ -29,6 +29,7 @@ def _format_env_value(value: str | None, mask: bool = False) -> str:
     return value
 
 
+
 def _log_env_value(name: str, value: str | None, mask: bool = False) -> None:
     logger.info("%s (env): %s", name, _format_env_value(value, mask=mask))
 
@@ -43,6 +44,7 @@ def _log_collection(name: str, values: Iterable[str]) -> None:
 
 # Liste des origines autorisées pour CORS
 _default_cors = "https://tchatrecosong-front.onrender.com,http://localhost:5173"
+
 _raw_cors = os.getenv("CORS_ORIGINS")
 _log_env_value("CORS_ORIGINS", _raw_cors)
 if _raw_cors is None:
@@ -87,4 +89,5 @@ _raw_allowed_twitch = os.getenv("ALLOWED_TWITCH_LOGINS", "")
 _log_env_value("ALLOWED_TWITCH_LOGINS", _raw_allowed_twitch)
 ALLOWED_TWITCH_LOGINS = set(_split_env(_raw_allowed_twitch))
 _log_collection("ALLOWED_TWITCH_LOGINS", sorted(ALLOWED_TWITCH_LOGINS))
+
 
