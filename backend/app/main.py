@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import OperationalError
 
-from app.config import CORS_ORIGINS
+from app.config import CORS_ORIGINS, log_environment_configuration
 from app.api.routes import songs, ban_rules, public_submissions, auth
 from app import models  # noqa: F401 - ensure models are imported before create_all
 from app.database.connection import Base, check_connection, describe_active_database, engine
@@ -17,6 +17,8 @@ app = FastAPI(title="Twitch Song Recommender")
 @app.on_event("startup")
 async def startup_checks() -> None:
     """Vérifie la connexion PostgreSQL sans bloquer le démarrage du backend."""
+
+    log_environment_configuration()
 
     try:
         check_connection()
