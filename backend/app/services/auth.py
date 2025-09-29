@@ -61,9 +61,16 @@ def _fetch_google_keys() -> list[dict]:
             response.raise_for_status()
     except httpx.HTTPError as exc:  # pragma: no cover - dépend d'un service externe
         logger.exception("Échec lors de la récupération des clés Google")
+
         raise AdminAuthError("Impossible de vérifier le token Google") from exc
 
-    data = response.json()
+    try:
+        data = response.json()
+    except ValueError as exc:  # pragma: no cover - dépend de la réponse Google
+        logger.exception("Réponse JWKS Google illisible")
+
+        raise AdminAuthError("Impossible de vérifier le token Google") from exc
+
     keys = data.get("keys", [])
     logger.debug("%d clés publiques Google récupérées", len(keys))
 
@@ -84,7 +91,13 @@ def _load_google_public_key(kid: str) -> Any:
     for jwk in keys:
         if jwk.get("kid") == kid:
             logger.debug("Clé publique trouvée pour kid=%s", kid)
-            return PyJWK.from_dict(jwk).key
+
+            try:
+                return PyJWK.from_dict(jwk).key
+            except PyJWTError as exc:  # pragma: no cover - dépend du format de la clé
+                logger.exception("Échec du chargement de la clé Google (kid=%s)", kid)
+                raise AdminAuthError("Clé Google invalide") from exc
+
 
     logger.warning("Aucune clé Google ne correspond au kid fourni (kid=%s)", kid)
     raise AdminAuthError("Clé Google introuvable pour le token fourni")
@@ -175,6 +188,17 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     except PyJWTError as exc:  # pragma: no cover - dépend du token reçu
         logger.exception("Échec du décodage du token Google (kid=%s)", kid)
         raise AdminAuthError("Token Google invalide") from exc
+    except Exception as exc:  # pragma: no cover - sécurité supplémentaire
+        logger.exception("Erreur inattendue lors du décodage du token Google (kid=%s)", kid)
+        raise AdminAuthError("Impossible de vérifier le token Google") from exc
+
+    if idinfo.get("iss") not in GOOGLE_ISSUERS:
+        logger.warning(
+            "Émetteur Google invalide (iss=%s, kid=%s)",
+            idinfo.get("iss"),
+            kid,
+        )
+        raise AdminAuthError("Émetteur Google invalide")
 
     if idinfo.get("iss") not in GOOGLE_ISSUERS:
 
