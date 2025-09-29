@@ -6,6 +6,7 @@ from app.models.song import Song
 from app.schemas.ban_rule import BanRuleCreate
 from app.utils.text import normalize
 
+
 def _matches_rule(song: Song, rule: BanRule) -> bool:
     matches_title = True
     if rule.title:

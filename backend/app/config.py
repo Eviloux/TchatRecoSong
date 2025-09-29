@@ -48,33 +48,6 @@ def _log_collection(name: str, values: Iterable[str]) -> None:
         logger.info("%s interprétée: <vide>", name)
 
 
-def _mask_secret(value: str | None, keep: int = 4) -> str | None:
-    if not value:
-        return value
-    if len(value) <= keep:
-        return "*" * len(value)
-    return value[:keep] + "*" * (len(value) - keep)
-
-
-def _format_env_value(value: str | None, mask: bool = False) -> str:
-    if value is None:
-        return "<non défini>"
-    if mask:
-        return _mask_secret(value) or "<non défini>"
-    return value
-
-
-def _log_env_value(name: str, value: str | None, mask: bool = False) -> None:
-    logger.info("%s (env): %s", name, _format_env_value(value, mask=mask))
-
-
-def _log_collection(name: str, values: Iterable[str]) -> None:
-    values_list = list(values)
-    if values_list:
-        logger.info("%s interprétée: %s", name, values_list)
-    else:
-        logger.info("%s interprétée: <vide>", name)
-
 
 # Liste des origines autorisées pour CORS
 _default_cors = "https://tchatrecosong-front.onrender.com,http://localhost:5173"
