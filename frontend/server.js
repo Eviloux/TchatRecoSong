@@ -30,6 +30,7 @@ function getContentType(filePath) {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
+
 function setCommonHeaders(res) {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
@@ -39,6 +40,7 @@ function sendFile(req, res, filePath, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', getContentType(filePath));
   setCommonHeaders(res);
+
   if (req.method === 'HEAD') {
     res.end();
     return;

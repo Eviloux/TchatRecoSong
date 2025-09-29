@@ -6,7 +6,6 @@ from app.models.song import Song
 from app.schemas.ban_rule import BanRuleCreate
 from app.utils.text import normalize
 
-
 def _matches_rule(song: Song, rule: BanRule) -> bool:
     matches_title = True
     if rule.title:
@@ -40,6 +39,7 @@ def _apply_rule_to_existing_songs(db: Session, rule: BanRule) -> None:
             .filter(Song.id.in_(ids_to_delete))
             .delete(synchronize_session=False)
         )
+
 
 
 def add_ban_rule(db: Session, rule: BanRuleCreate):
