@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import time
 from datetime import datetime, timedelta
@@ -31,6 +32,8 @@ _GOOGLE_KEYS_EXPIRATION: float = 0.0
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
+logger = logging.getLogger(__name__)
+
 
 class AdminAuthError(HTTPException):
     def __init__(self, detail: str, status_code: int = status.HTTP_401_UNAUTHORIZED) -> None:
@@ -42,6 +45,10 @@ def _fetch_google_keys() -> list[dict]:
 
     now = time.time()
     if _GOOGLE_KEYS and now < _GOOGLE_KEYS_EXPIRATION:
+        logger.debug(
+            "Utilisation du cache JWKS Google (expire dans %.0fs)",
+            _GOOGLE_KEYS_EXPIRATION - now,
+        )
         return _GOOGLE_KEYS
 
     try:
@@ -49,10 +56,12 @@ def _fetch_google_keys() -> list[dict]:
             response = client.get(GOOGLE_JWKS_URL)
             response.raise_for_status()
     except httpx.HTTPError as exc:  # pragma: no cover - dépend d'un service externe
+        logger.exception("Échec lors de la récupération des clés Google")
         raise AdminAuthError("Impossible de vérifier le token Google") from exc
 
     data = response.json()
     keys = data.get("keys", [])
+    logger.debug("%d clés publiques Google récupérées", len(keys))
 
     cache_control = response.headers.get("cache-control", "")
     match = re.search(r"max-age=(\d+)", cache_control)
@@ -70,9 +79,10 @@ def _load_google_public_key(kid: str) -> Any:
     keys = _fetch_google_keys()
     for jwk in keys:
         if jwk.get("kid") == kid:
-
+            logger.debug("Clé publique trouvée pour kid=%s", kid)
             return PyJWK.from_dict(jwk).key
 
+    logger.warning("Aucune clé Google ne correspond au kid fourni (kid=%s)", kid)
     raise AdminAuthError("Clé Google introuvable pour le token fourni")
 
 
@@ -115,10 +125,14 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     except PyJWTError as exc:  # pragma: no cover - token invalide
         raise AdminAuthError("Token Google mal formé") from exc
 
-
     kid = header.get("kid")
     if not kid:
         raise AdminAuthError("Token Google mal formé")
+    logger.info(
+        "Tentative d'authentification Google (kid=%s, alg=%s)",
+        kid,
+        header.get("alg"),
+    )
 
     public_key = _load_google_public_key(kid)
 
@@ -131,22 +145,60 @@ def authenticate_google(credential: str) -> tuple[str, str]:
             options={"verify_iss": False},
         )
     except jwt.ExpiredSignatureError:
+        logger.info("Token Google expiré pour kid=%s", kid)
         raise AdminAuthError("Token Google expiré")
     except jwt.InvalidAudienceError:
+        try:
+            claims = jwt.decode(
+                credential,
+                options={
+                    "verify_signature": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                },
+                algorithms=["RS256"],
+            )
+            audience = claims.get("aud")
+        except Exception:  # pragma: no cover - best effort logging only
+            audience = None
+        logger.warning(
+            "Audience Google inattendue (attendu=%s, reçu=%s, kid=%s)",
+            GOOGLE_CLIENT_ID,
+            audience,
+            kid,
+        )
         raise AdminAuthError("Client Google non autorisé")
     except PyJWTError as exc:  # pragma: no cover - dépend du token reçu
+        logger.exception("Échec du décodage du token Google (kid=%s)", kid)
         raise AdminAuthError("Token Google invalide") from exc
 
     if idinfo.get("iss") not in GOOGLE_ISSUERS:
+
+        logger.warning(
+            "Émetteur Google invalide (iss=%s, kid=%s)",
+            idinfo.get("iss"),
+            kid,
+        )
+
         raise AdminAuthError("Émetteur Google invalide")
 
     email = idinfo.get("email")
+    logger.info(
+        "Token Google décodé (email=%s, email_verified=%s, iss=%s, aud=%s, sub=%s)",
+        email,
+        idinfo.get("email_verified"),
+        idinfo.get("iss"),
+        idinfo.get("aud"),
+        idinfo.get("sub"),
+    )
     if ALLOWED_GOOGLE_EMAILS and email not in ALLOWED_GOOGLE_EMAILS:
+        logger.warning("Email Google non autorisé (email=%s)", email)
         raise AdminAuthError("Adresse non autorisée", status.HTTP_403_FORBIDDEN)
 
     name = idinfo.get("name") or email or "Google Admin"
     subject = f"google:{idinfo.get('sub')}"
     token = issue_admin_token(subject=subject, name=name, provider="google")
+    logger.info("Authentification Google réussie (subject=%s, name=%s)", subject, name)
     return token, name
 
 
@@ -158,28 +210,54 @@ def authenticate_twitch(access_token: str) -> tuple[str, str]:
 
     with httpx.Client(timeout=5.0) as client:
         try:
+            logger.info("Tentative d'authentification Twitch (OAuth header)")
             response = client.get("https://id.twitch.tv/oauth2/validate", headers=headers)
             if response.status_code == 401:
                 # Certains SDK fournissent des tokens à valider via l'entête Bearer
                 headers["Authorization"] = f"Bearer {access_token}"
+                logger.info(
+                    "Réessai de validation Twitch avec l'entête Bearer (statut=%s)",
+                    response.status_code,
+                )
                 response = client.get("https://id.twitch.tv/oauth2/validate", headers=headers)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:  # pragma: no cover - dépend du service externe
+            logger.warning(
+                "Réponse HTTP inattendue de Twitch (statut=%s, corps=%s)",
+                exc.response.status_code,
+                exc.response.text[:200],
+            )
             raise AdminAuthError("Token Twitch invalide") from exc
         except httpx.HTTPError as exc:  # pragma: no cover - dépend du réseau
+            logger.exception("Erreur réseau lors de la validation Twitch")
             raise AdminAuthError("Impossible de contacter Twitch") from exc
 
     data = response.json()
     login = data.get("login")
     client_id = data.get("client_id")
 
+    logger.info(
+        "Token Twitch validé (login=%s, client_id=%s, scopes=%s, expires_in=%s)",
+        login,
+        client_id,
+        data.get("scopes"),
+        data.get("expires_in"),
+    )
+
     if client_id != TWITCH_CLIENT_ID:
+        logger.warning(
+            "Client Twitch inattendu (attendu=%s, reçu=%s)",
+            TWITCH_CLIENT_ID,
+            client_id,
+        )
         raise AdminAuthError("Client Twitch non autorisé")
 
     if ALLOWED_TWITCH_LOGINS and login not in ALLOWED_TWITCH_LOGINS:
+        logger.warning("Compte Twitch non autorisé (login=%s)", login)
         raise AdminAuthError("Compte Twitch non autorisé", status.HTTP_403_FORBIDDEN)
 
     subject = f"twitch:{data.get('user_id')}"
     name = login or subject
     token = issue_admin_token(subject=subject, name=name, provider="twitch")
+    logger.info("Authentification Twitch réussie (subject=%s, name=%s)", subject, name)
     return token, name
