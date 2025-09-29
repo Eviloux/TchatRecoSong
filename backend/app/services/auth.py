@@ -11,6 +11,7 @@ import httpx
 import jwt
 
 from jwt import PyJWTError, PyJWK
+from jwt.algorithms import RSAAlgorithm
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -93,8 +94,11 @@ def _load_google_public_key(kid: str) -> Any:
             logger.debug("Clé publique trouvée pour kid=%s", kid)
 
             try:
-                return PyJWK.from_dict(jwk).key
-            except PyJWTError as exc:  # pragma: no cover - dépend du format de la clé
+                if isinstance(jwk, PyJWK):
+                    return jwk.key
+
+                return RSAAlgorithm.from_jwk(json.dumps(jwk))
+            except (PyJWTError, ValueError, TypeError) as exc:  # pragma: no cover - dépend du format de la clé
                 logger.exception("Échec du chargement de la clé Google (kid=%s)", kid)
                 raise AdminAuthError("Clé Google invalide") from exc
 
@@ -198,16 +202,6 @@ def authenticate_google(credential: str) -> tuple[str, str]:
             idinfo.get("iss"),
             kid,
         )
-        raise AdminAuthError("Émetteur Google invalide")
-
-    if idinfo.get("iss") not in GOOGLE_ISSUERS:
-
-        logger.warning(
-            "Émetteur Google invalide (iss=%s, kid=%s)",
-            idinfo.get("iss"),
-            kid,
-        )
-
         raise AdminAuthError("Émetteur Google invalide")
 
     email = idinfo.get("email")
