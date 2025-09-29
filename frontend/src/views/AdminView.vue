@@ -107,9 +107,15 @@ const handleGoogleCredential = async (response: any) => {
 const initGoogle = () => {
   if (!googleClientId || !window.google) return;
   window.google.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleCredential });
-  window.google.accounts.id.renderButton(document.getElementById('google-login'), {
+  const container = document.getElementById('google-login');
+  if (!container) return;
+  const width = Math.min(container.offsetWidth || 320, 320);
+  window.google.accounts.id.renderButton(container, {
     theme: 'outline',
     size: 'large',
+    width,
+    text: 'signin_with',
+    shape: 'rectangular',
   });
 };
 
