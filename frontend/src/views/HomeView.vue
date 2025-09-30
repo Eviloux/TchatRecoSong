@@ -25,19 +25,20 @@
 
     <p v-if="feedback" class="feedback" :class="feedbackType">{{ feedback }}</p>
 
-    <SongList ref="songListRef" />
+    <SongList ref="songListRef" allow-voting />
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import SongList from '../components/SongList.vue';
+import { getApiUrl } from '../utils/api';
 
 type SongListInstance = {
   refresh: () => Promise<void> | void;
 };
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = getApiUrl();
 const viewerUrl =
   import.meta.env.VITE_PUBLIC_VIEWER_URL || `${window.location.origin}/submit`;
 

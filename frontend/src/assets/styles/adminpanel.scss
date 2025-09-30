@@ -25,6 +25,30 @@
     li {
       padding: vars.$spacing-small 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: vars.$spacing-small;
+
+      .ban-details {
+        flex: 1 1 auto;
+        min-width: 200px;
+      }
+
+      .ban-actions {
+        display: flex;
+        gap: vars.$spacing-small;
+
+        button {
+          @include mixins.button-style;
+          padding: vars.$spacing-small vars.$spacing-medium;
+
+          &.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+          }
+        }
+      }
     }
   }
 
@@ -35,6 +59,12 @@
   .ban-form {
     display: grid;
     gap: vars.$spacing-medium;
+
+    .edit-info {
+      margin: 0;
+      font-style: italic;
+      color: vars.$muted-color;
+    }
 
     .field {
       display: flex;
@@ -49,9 +79,26 @@
       }
     }
 
-    button {
-      @include mixins.button-style;
-      justify-self: flex-start;
+    .form-actions {
+      display: flex;
+      gap: vars.$spacing-small;
+      flex-wrap: wrap;
+
+      button {
+        @include mixins.button-style;
+      }
+
+      .secondary {
+        background: rgba(148, 163, 184, 0.2);
+        color: vars.$text-color;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+      }
     }
+  }
+
+  .form-error {
+    margin-top: vars.$spacing-small;
+    color: vars.$accent-color;
+    font-weight: 600;
   }
 }
