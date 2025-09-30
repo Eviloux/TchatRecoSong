@@ -17,7 +17,9 @@ from app.crud import ban_rule as ban_crud
 from app.crud import song as song_crud
 from app.database.connection import Base
 from app.models.song import Song
-from app.schemas.ban_rule import BanRuleCreate
+
+from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
+
 from app.schemas.song import SongCreate
 
 
@@ -83,6 +85,49 @@ def test_add_ban_rule_with_link_removes_song(session: Session) -> None:
     assert session.query(Song).count() == 0
 
 
+
+def test_update_ban_rule_applies_new_filters(session: Session) -> None:
+    first = song_crud.add_or_increment_song(
+        session,
+        SongCreate(
+            title="Old title",
+            artist="Same Artist",
+            link="https://example.com/old",
+        ),
+    )
+    song_crud.add_or_increment_song(
+        session,
+        SongCreate(
+            title="New title",
+            artist="Same Artist",
+            link="https://example.com/new",
+        ),
+    )
+
+    rule = ban_crud.add_ban_rule(
+        session,
+        BanRuleCreate(title="Old title", artist="Same Artist"),
+    )
+
+    remaining_links = {song.link for song in session.query(Song).all()}
+    assert first.link not in remaining_links
+    assert "https://example.com/new" in remaining_links
+
+    updated = ban_crud.update_ban_rule(
+        session,
+        rule.id,
+        BanRuleUpdate(title="New title", artist="Same Artist"),
+    )
+
+    assert updated is not None
+    assert updated.title == "New title"
+    assert {song.link for song in session.query(Song).all()} == set()
+
+
+def test_update_ban_rule_returns_none_for_unknown_id(session: Session) -> None:
+    assert ban_crud.update_ban_rule(session, 999, BanRuleUpdate(link="https://x")) is None
+
+
 def test_delete_song(session: Session) -> None:
     created = song_crud.add_or_increment_song(
         session,
@@ -96,6 +141,18 @@ def test_delete_song(session: Session) -> None:
     assert song_crud.delete_song(session, created.id) is True
     assert session.query(Song).count() == 0
     assert song_crud.delete_song(session, created.id) is False
+
+
+
+def test_delete_ban_rule(session: Session) -> None:
+    rule = ban_crud.add_ban_rule(
+        session,
+        BanRuleCreate(title="To delete", artist=None, link=None),
+    )
+
+    assert ban_crud.delete_ban_rule(session, rule.id) is True
+    assert ban_crud.delete_ban_rule(session, rule.id) is False
+
 
 
 def test_increment_vote(session: Session) -> None:

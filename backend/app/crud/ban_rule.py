@@ -3,7 +3,9 @@ from sqlalchemy import or_
 
 from app.models.ban_rule import BanRule
 from app.models.song import Song
-from app.schemas.ban_rule import BanRuleCreate
+
+from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
+
 from app.utils.text import normalize
 
 
@@ -52,6 +54,33 @@ def add_ban_rule(db: Session, rule: BanRuleCreate):
     db.commit()
     db.refresh(db_rule)
     return db_rule
+
+
+def update_ban_rule(db: Session, rule_id: int, payload: BanRuleUpdate):
+    db_rule = db.get(BanRule, rule_id)
+    if db_rule is None:
+        return None
+
+    for field, value in payload.model_dump().items():
+        setattr(db_rule, field, value)
+
+    db.flush()
+    _apply_rule_to_existing_songs(db, db_rule)
+
+    db.commit()
+    db.refresh(db_rule)
+    return db_rule
+
+
+def delete_ban_rule(db: Session, rule_id: int) -> bool:
+    db_rule = db.get(BanRule, rule_id)
+    if db_rule is None:
+        return False
+
+    db.delete(db_rule)
+    db.commit()
+    return True
+
 
 def list_ban_rules(db: Session):
     return db.query(BanRule).order_by(BanRule.id.desc()).all()

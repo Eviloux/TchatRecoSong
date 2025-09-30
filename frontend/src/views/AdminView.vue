@@ -35,7 +35,9 @@
     <div v-else class="admin-content">
       <button type="button" class="logout" @click="logout">Se déconnecter</button>
       <SongList ref="songListRef" :token="token" />
-      <AdminPanel :token="token" @ban-rule-created="handleBanRuleCreated" />
+
+      <AdminPanel :token="token" @ban-rules-changed="handleBanRuleCreated" />
+
     </div>
   </section>
 </template>
@@ -44,6 +46,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
+import { getApiUrl } from '../utils/api';
 
 interface AdminProfile {
   name: string;
@@ -60,7 +63,8 @@ declare global {
   }
 }
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = getApiUrl();
+
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
@@ -91,7 +95,10 @@ const handleBanRuleCreated = async () => {
 };
 
 const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
-  if (!API_URL) return;
+  if (!API_URL) {
+    error.value = 'API non configurée.';
+    return;
+  }
   try {
     error.value = '';
     const response = await fetch(`${API_URL}/auth/${endpoint}`, {

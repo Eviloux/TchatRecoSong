@@ -30,7 +30,6 @@ function getContentType(filePath) {
   return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
-
 function setCommonHeaders(res) {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
@@ -68,6 +67,11 @@ const server = createServer(async (req, res) => {
   }
   if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
 
+    sendFile(req, res, indexPath);
+    return;
+  }
+
+  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
     sendFile(req, res, indexPath);
     return;
   }

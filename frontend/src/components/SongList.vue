@@ -41,6 +41,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 
+import { getApiUrl } from '../utils/api';
+
+
 interface Song {
   id: number;
   title: string;
@@ -52,7 +55,9 @@ interface Song {
 const props = defineProps<{ token?: string | null; allowVoting?: boolean }>();
 const emit = defineEmits<{ (e: 'song-deleted'): void }>();
 
-const API_URL = import.meta.env.VITE_API_URL;
+
+const API_URL = getApiUrl();
+
 const songs = ref<Song[]>([]);
 const voting = ref<number | null>(null);
 const deleting = ref<number | null>(null);
