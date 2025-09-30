@@ -3,7 +3,9 @@ from sqlalchemy import or_
 
 from app.models.ban_rule import BanRule
 from app.models.song import Song
+
 from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
+
 from app.utils.text import normalize
 
 

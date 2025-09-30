@@ -80,6 +80,7 @@ interface BanRule {
 }
 
 const props = defineProps<{ token: string | null }>();
+
 const emit = defineEmits<{ (e: 'ban-rules-changed'): void }>();
 const API_URL = getApiUrl();
 const banRules = ref<BanRule[]>([]);
@@ -94,6 +95,7 @@ const editingRule = computed(() =>
   editingRuleId.value ? banRules.value.find((rule) => rule.id === editingRuleId.value) ?? null : null,
 );
 
+
 const fetchBanRules = async () => {
   if (!API_URL) return;
   try {
@@ -106,10 +108,12 @@ const fetchBanRules = async () => {
 };
 
 const submit = async () => {
+
   if (!props.token || !API_URL) {
     formError.value = "API non configurée.";
     return;
   }
+
   const payload = {
     title: form.title.trim() || null,
     artist: form.artist.trim() || null,
@@ -117,7 +121,9 @@ const submit = async () => {
   };
 
   if (!payload.title && !payload.artist && !payload.link) {
+
     formError.value = 'Renseignez au moins un champ pour enregistrer une règle.';
+
     return;
   }
 
@@ -142,6 +148,7 @@ const submit = async () => {
     form.artist = '';
     form.link = '';
     formError.value = '';
+
     editingRuleId.value = null;
     await fetchBanRules();
     emit('ban-rules-changed');
@@ -197,6 +204,7 @@ const deleteRule = async (ruleId: number) => {
     formError.value = error instanceof Error ? error.message : 'Suppression impossible.';
   } finally {
     deletingRuleId.value = null;
+
   }
 };
 

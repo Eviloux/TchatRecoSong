@@ -35,7 +35,9 @@
     <div v-else class="admin-content">
       <button type="button" class="logout" @click="logout">Se déconnecter</button>
       <SongList ref="songListRef" :token="token" />
+
       <AdminPanel :token="token" @ban-rules-changed="handleBanRuleCreated" />
+
     </div>
   </section>
 </template>
@@ -62,6 +64,7 @@ declare global {
 }
 
 const API_URL = getApiUrl();
+
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
@@ -136,6 +139,7 @@ const ensureGoogleButton = async () => {
   container.innerHTML = '';
   const width = Math.min(container.offsetWidth || 320, 320);
   window.google.accounts.id.initialize({ client_id: googleClientId.value, callback: handleGoogleCredential });
+
   window.google.accounts.id.renderButton(container, {
     theme: 'outline',
     size: 'large',

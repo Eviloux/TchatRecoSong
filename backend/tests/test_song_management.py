@@ -17,7 +17,9 @@ from app.crud import ban_rule as ban_crud
 from app.crud import song as song_crud
 from app.database.connection import Base
 from app.models.song import Song
+
 from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
+
 from app.schemas.song import SongCreate
 
 
@@ -83,6 +85,7 @@ def test_add_ban_rule_with_link_removes_song(session: Session) -> None:
     assert session.query(Song).count() == 0
 
 
+
 def test_update_ban_rule_applies_new_filters(session: Session) -> None:
     first = song_crud.add_or_increment_song(
         session,
@@ -140,6 +143,7 @@ def test_delete_song(session: Session) -> None:
     assert song_crud.delete_song(session, created.id) is False
 
 
+
 def test_delete_ban_rule(session: Session) -> None:
     rule = ban_crud.add_ban_rule(
         session,
@@ -148,6 +152,7 @@ def test_delete_ban_rule(session: Session) -> None:
 
     assert ban_crud.delete_ban_rule(session, rule.id) is True
     assert ban_crud.delete_ban_rule(session, rule.id) is False
+
 
 
 def test_increment_vote(session: Session) -> None:

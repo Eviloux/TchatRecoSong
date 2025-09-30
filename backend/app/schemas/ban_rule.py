@@ -1,4 +1,6 @@
+
 from pydantic import BaseModel, field_validator, model_validator
+
 
 
 class BanRuleBase(BaseModel):
@@ -15,6 +17,7 @@ class BanRuleBase(BaseModel):
             stripped = value.strip()
             return stripped or None
         return value
+
 
     @model_validator(mode="after")
     def _ensure_any_field(cls, values: "BanRuleBase") -> "BanRuleBase":

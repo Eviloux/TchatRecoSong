@@ -39,6 +39,7 @@ function sendFile(req, res, filePath, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', getContentType(filePath));
   setCommonHeaders(res);
+
   if (req.method === 'HEAD') {
     res.end();
     return;
@@ -64,11 +65,17 @@ const server = createServer(async (req, res) => {
     res.end();
     return;
   }
+  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
+
+    sendFile(req, res, indexPath);
+    return;
+  }
 
   if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
     sendFile(req, res, indexPath);
     return;
   }
+
 
   const normalized = decodedPath.replace(/^\/+/, '');
   const hasExtension = extname(normalized) !== '';
