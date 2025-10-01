@@ -32,7 +32,7 @@ function getContentType(filePath) {
 
 function setCommonHeaders(res) {
   res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
 }
 
 function sendFile(req, res, filePath, status = 200) {
