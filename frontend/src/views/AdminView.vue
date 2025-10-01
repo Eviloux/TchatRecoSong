@@ -211,6 +211,14 @@ watch(googleClientId, () => {
   scheduleGoogleInitRetry();
 });
 
+watch(token, async (newToken) => {
+  if (newToken === null) {
+    await nextTick();
+    ensureGoogleButton();
+    scheduleGoogleInitRetry();
+  }
+});
+
 onMounted(async () => {
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
