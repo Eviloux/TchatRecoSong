@@ -31,7 +31,6 @@ function getContentType(filePath) {
 }
 
 function setCommonHeaders(res) {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
 }
 
