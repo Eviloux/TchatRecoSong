@@ -176,6 +176,51 @@ const loginWithTwitch = () => {
   window.location.href = url.toString();
 };
 
+
+const handleTwitchRedirect = async (): Promise<boolean> => {
+  if (!window.location.hash) {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.hash.replace('#', ''));
+  const errorParam = params.get('error');
+  const errorDescription = params.get('error_description');
+  const accessToken = params.get('access_token');
+
+  if (!errorParam && !accessToken) {
+    return false;
+  }
+
+  const adminHref = router.resolve({ name: 'admin' }).href;
+  window.history.replaceState({}, document.title, adminHref);
+
+  if (errorParam) {
+    error.value = errorDescription || errorParam;
+    return true;
+  }
+
+  if (!accessToken) {
+    return false;
+  }
+
+  try {
+    error.value = '';
+    await callAuthEndpoint('twitch', { access_token: accessToken });
+    return true;
+  } catch (err: any) {
+    console.error(err);
+    error.value = err.message || 'Connexion impossible.';
+    return true;
+
+  }
+  if (data.twitch_client_id) {
+    twitchClientId.value = data.twitch_client_id;
+  }
+  if (data.twitch_redirect_uri) {
+
+    twitchRedirectUriRef.value = data.twitch_redirect_uri;
+
+
 const fetchAuthConfig = async () => {
   const data = await fetchAuthConfigFromApi();
   if (!data) return;
@@ -186,7 +231,6 @@ const fetchAuthConfig = async () => {
     twitchClientId.value = data.twitch_client_id;
   }
   if (data.twitch_redirect_uri) {
-
     twitchRedirectUriRef.value = data.twitch_redirect_uri;
 
   }
@@ -206,9 +250,9 @@ watch(token, async (newToken) => {
 });
 
 onMounted(async () => {
-  if (window.location.hash.includes('access_token=')) {
 
-    await router.replace({ name: 'twitchCallback', hash: window.location.hash });
+  const twitchHandled = await handleTwitchRedirect();
+  if (twitchHandled) {
     return;
   }
 
