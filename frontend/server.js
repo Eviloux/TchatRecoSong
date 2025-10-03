@@ -32,6 +32,7 @@ function getContentType(filePath) {
 
 function setCommonHeaders(res) {
   res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+
 }
 
 function sendFile(req, res, filePath, status = 200) {
