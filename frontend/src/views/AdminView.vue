@@ -65,11 +65,16 @@ declare global {
   }
 }
 
+
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const initialTwitchRedirect =
   import.meta.env.VITE_TWITCH_REDIRECT_URI || `${window.location.origin}/admin`;
 const twitchRedirectUriRef = ref<string>(initialTwitchRedirect);
+
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
+const defaultTwitchRedirectUri = `${window.location.origin}/admin`;
+const twitchRedirectUri = ref<string>(import.meta.env.VITE_TWITCH_REDIRECT_URI || defaultTwitchRedirectUri);
+
 
 const router = useRouter();
 
@@ -160,14 +165,17 @@ const loginWithTwitch = () => {
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
+
   const redirectUri = twitchRedirectUriRef.value || `${window.location.origin}/admin`;
+
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
   url.searchParams.set('client_id', twitchClientId.value);
-  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('redirect_uri', twitchRedirectUri.value);
   url.searchParams.set('response_type', 'token');
   url.searchParams.set('scope', 'user:read:email');
   window.location.href = url.toString();
 };
+
 
 const handleTwitchRedirect = async (): Promise<boolean> => {
   if (!window.location.hash) {
@@ -203,8 +211,15 @@ const handleTwitchRedirect = async (): Promise<boolean> => {
     console.error(err);
     error.value = err.message || 'Connexion impossible.';
     return true;
+
   }
-};
+  if (data.twitch_client_id) {
+    twitchClientId.value = data.twitch_client_id;
+  }
+  if (data.twitch_redirect_uri) {
+
+    twitchRedirectUriRef.value = data.twitch_redirect_uri;
+
 
 const fetchAuthConfig = async () => {
   const data = await fetchAuthConfigFromApi();
@@ -217,6 +232,7 @@ const fetchAuthConfig = async () => {
   }
   if (data.twitch_redirect_uri) {
     twitchRedirectUriRef.value = data.twitch_redirect_uri;
+
   }
 };
 
@@ -234,10 +250,12 @@ watch(token, async (newToken) => {
 });
 
 onMounted(async () => {
+
   const twitchHandled = await handleTwitchRedirect();
   if (twitchHandled) {
     return;
   }
+
 
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
