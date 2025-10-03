@@ -46,12 +46,13 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
-import { getApiUrl } from '../utils/api';
-
-interface AdminProfile {
-  name: string;
-  provider: string;
-}
+import { exchangeAdminAuth, fetchAuthConfigFromApi } from '../services/adminAuth';
+import {
+  AdminProfile,
+  clearAdminSession,
+  loadAdminSession,
+  saveAdminSession,
+} from '../utils/adminSession';
 
 type SongListHandle = {
   refresh: () => Promise<void> | void;
@@ -63,29 +64,25 @@ declare global {
   }
 }
 
-const API_URL = getApiUrl();
-
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
-const token = ref<string | null>(localStorage.getItem('admin_token'));
-const storedProfile = localStorage.getItem('admin_profile');
-const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
+const existingSession = loadAdminSession();
+const token = ref<string | null>(existingSession?.token ?? null);
+const profile = ref<AdminProfile | null>(existingSession?.profile ?? null);
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
 const storeSession = (authToken: string, provider: string, name: string) => {
-  token.value = authToken;
-  profile.value = { name, provider };
-  localStorage.setItem('admin_token', authToken);
-  localStorage.setItem('admin_profile', JSON.stringify(profile.value));
+  const session = saveAdminSession(authToken, provider, name);
+  token.value = session.token;
+  profile.value = session.profile;
 };
 
 const logout = () => {
   token.value = null;
   profile.value = null;
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_profile');
+  clearAdminSession();
 };
 
 const handleBanRuleCreated = async () => {
@@ -95,22 +92,9 @@ const handleBanRuleCreated = async () => {
 };
 
 const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
-  if (!API_URL) {
-    error.value = 'API non configurée.';
-    return;
-  }
   try {
     error.value = '';
-    const response = await fetch(`${API_URL}/auth/${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({ detail: 'Erreur inconnue' }));
-      throw new Error(data.detail);
-    }
-    const data = await response.json();
+    const data = await exchangeAdminAuth(endpoint, payload);
     storeSession(data.token, data.provider, data.name);
   } catch (err: any) {
     console.error(err);
@@ -170,7 +154,7 @@ const loginWithTwitch = () => {
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
-  const redirectUri = `${window.location.origin}/admin`;
+  const redirectUri = `${window.location.origin}/oauth/twitch`;
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
   url.searchParams.set('client_id', twitchClientId.value);
   url.searchParams.set('redirect_uri', redirectUri);
@@ -179,30 +163,14 @@ const loginWithTwitch = () => {
   window.location.href = url.toString();
 };
 
-const checkTwitchRedirect = async () => {
-  if (!window.location.hash) return;
-  const params = new URLSearchParams(window.location.hash.replace('#', ''));
-  const accessToken = params.get('access_token');
-  if (accessToken) {
-    await callAuthEndpoint('twitch', { access_token: accessToken });
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-};
-
 const fetchAuthConfig = async () => {
-  if (!API_URL) return;
-  try {
-    const response = await fetch(`${API_URL}/auth/config`);
-    if (!response.ok) return;
-    const data = await response.json();
-    if (data.google_client_id) {
-      googleClientId.value = data.google_client_id;
-    }
-    if (data.twitch_client_id) {
-      twitchClientId.value = data.twitch_client_id;
-    }
-  } catch (err) {
-    console.error('Impossible de récupérer la configuration auth', err);
+  const data = await fetchAuthConfigFromApi();
+  if (!data) return;
+  if (data.google_client_id) {
+    googleClientId.value = data.google_client_id;
+  }
+  if (data.twitch_client_id) {
+    twitchClientId.value = data.twitch_client_id;
   }
 };
 
@@ -222,7 +190,6 @@ watch(token, async (newToken) => {
 onMounted(async () => {
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
-  await checkTwitchRedirect();
   ensureGoogleButton();
 });
 
