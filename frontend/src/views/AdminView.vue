@@ -65,12 +65,17 @@ declare global {
   }
 }
 
-const router = useRouter();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+const initialTwitchRedirect =
+  import.meta.env.VITE_TWITCH_REDIRECT_URI || `${window.location.origin}/admin`;
+const twitchRedirectUri = ref<string>(initialTwitchRedirect);
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 const defaultTwitchRedirectUri = `${window.location.origin}/admin`;
 const twitchRedirectUri = ref<string>(import.meta.env.VITE_TWITCH_REDIRECT_URI || defaultTwitchRedirectUri);
+
+
+const router = useRouter();
 
 const existingSession = loadAdminSession();
 const token = ref<string | null>(existingSession?.token ?? null);
@@ -159,6 +164,9 @@ const loginWithTwitch = () => {
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
+
+  const redirectUri = twitchRedirectUri.value || `${window.location.origin}/admin`;
+
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
   url.searchParams.set('client_id', twitchClientId.value);
   url.searchParams.set('redirect_uri', twitchRedirectUri.value);
@@ -196,9 +204,12 @@ watch(token, async (newToken) => {
 
 onMounted(async () => {
   if (window.location.hash.includes('access_token=')) {
-    router.replace({ name: 'twitchCallback', hash: window.location.hash });
+
+    await router.replace({ name: 'twitchCallback', hash: window.location.hash });
     return;
   }
+
+
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
   ensureGoogleButton();
