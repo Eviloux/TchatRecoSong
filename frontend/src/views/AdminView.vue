@@ -44,6 +44,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
 import { exchangeAdminAuth, fetchAuthConfigFromApi } from '../services/adminAuth';
@@ -64,8 +65,12 @@ declare global {
   }
 }
 
+const router = useRouter();
+
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
+const defaultTwitchRedirectUri = `${window.location.origin}/admin`;
+const twitchRedirectUri = ref<string>(import.meta.env.VITE_TWITCH_REDIRECT_URI || defaultTwitchRedirectUri);
 
 const existingSession = loadAdminSession();
 const token = ref<string | null>(existingSession?.token ?? null);
@@ -154,10 +159,9 @@ const loginWithTwitch = () => {
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
-  const redirectUri = `${window.location.origin}/oauth/twitch`;
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
   url.searchParams.set('client_id', twitchClientId.value);
-  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('redirect_uri', twitchRedirectUri.value);
   url.searchParams.set('response_type', 'token');
   url.searchParams.set('scope', 'user:read:email');
   window.location.href = url.toString();
@@ -171,6 +175,9 @@ const fetchAuthConfig = async () => {
   }
   if (data.twitch_client_id) {
     twitchClientId.value = data.twitch_client_id;
+  }
+  if (data.twitch_redirect_uri) {
+    twitchRedirectUri.value = data.twitch_redirect_uri;
   }
 };
 
@@ -188,6 +195,10 @@ watch(token, async (newToken) => {
 });
 
 onMounted(async () => {
+  if (window.location.hash.includes('access_token=')) {
+    router.replace({ name: 'twitchCallback', hash: window.location.hash });
+    return;
+  }
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
   ensureGoogleButton();

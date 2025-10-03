@@ -11,6 +11,7 @@ export interface AuthResponse {
 export interface AuthConfig {
   google_client_id?: string;
   twitch_client_id?: string;
+  twitch_redirect_uri?: string;
 }
 
 export async function exchangeAdminAuth(endpoint: AuthEndpoint, payload: Record<string, string>): Promise<AuthResponse> {
