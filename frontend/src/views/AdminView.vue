@@ -74,8 +74,6 @@ const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfil
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
-<<<<<<< HEAD
-=======
 const TWITCH_STATE_KEY = 'twitch_oauth_state';
 const TWITCH_RESULT_KEY = 'twitch_oauth_result';
 
@@ -161,7 +159,6 @@ const handleTwitchStorageEvent = (event: StorageEvent) => {
   }
 };
 
->>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
 const storeSession = (authToken: string, provider: string, name: string) => {
   token.value = authToken;
   profile.value = { name, provider };
@@ -213,8 +210,6 @@ const handleGoogleCredential = async (response: any) => {
 
 let googleInitTimer: number | null = null;
 
-<<<<<<< HEAD
-=======
 const consumePendingTwitchResult = async () => {
   try {
     const raw = localStorage.getItem(TWITCH_RESULT_KEY);
@@ -228,7 +223,6 @@ const consumePendingTwitchResult = async () => {
   }
 };
 
->>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
 const ensureGoogleButton = async () => {
   if (!googleClientId.value || !window.google?.accounts?.id) {
     return;
@@ -271,12 +265,6 @@ const scheduleGoogleInitRetry = () => {
 const loginWithTwitch = () => {
   error.value = '';
   if (!twitchClientId.value) {
-<<<<<<< HEAD
-    error.value = 'TWITCH_CLIENT_ID manquant.';
-    return;
-  }
-  const redirectUri = `${window.location.origin}/admin`;
-=======
     error.value = 'Identifiant client Twitch manquant.';
     return;
   }
@@ -285,27 +273,11 @@ const loginWithTwitch = () => {
   const state = generateTwitchState();
   sessionStorage.setItem(TWITCH_STATE_KEY, state);
 
->>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
   url.searchParams.set('client_id', twitchClientId.value);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'token');
   url.searchParams.set('scope', 'user:read:email');
-<<<<<<< HEAD
-  window.location.href = url.toString();
-};
-
-const checkTwitchRedirect = async () => {
-  if (!window.location.hash) return;
-  const params = new URLSearchParams(window.location.hash.replace('#', ''));
-  const accessToken = params.get('access_token');
-  if (accessToken) {
-    await callAuthEndpoint('twitch', { access_token: accessToken });
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-};
-
-=======
   url.searchParams.set('state', state);
 
   detachTwitchMessageHandler();
@@ -352,7 +324,6 @@ const checkTwitchRedirect = async () => {
   }, 500);
 };
 
->>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
 const fetchAuthConfig = async () => {
   if (!API_URL) return;
   try {
@@ -384,16 +355,10 @@ watch(token, async (newToken) => {
 });
 
 onMounted(async () => {
-<<<<<<< HEAD
-  scheduleGoogleInitRetry();
-  await fetchAuthConfig();
-  await checkTwitchRedirect();
-=======
   window.addEventListener('storage', handleTwitchStorageEvent);
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
   await consumePendingTwitchResult();
->>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
   ensureGoogleButton();
 });
 
