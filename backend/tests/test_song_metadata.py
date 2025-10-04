@@ -71,6 +71,7 @@ def test_build_song_prefers_overrides():
     assert created.artist == "Actual Artist"
 
 
+
 def test_fetch_song_metadata_spotify_uses_open_client(monkeypatch):
     class DummyClient:
         last_instance = None
@@ -105,3 +106,4 @@ def test_fetch_song_metadata_spotify_uses_open_client(monkeypatch):
     assert created.artist == "Parsed Artist"
     assert DummyClient.last_instance is not None
     assert DummyClient.last_instance.closed
+

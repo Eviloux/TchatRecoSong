@@ -134,11 +134,13 @@ def fetch_song_metadata(link: str) -> SongCreate:
             LOGGER.warning("Erreur réseau pour %s: %s", link, exc)
             raise MetadataError("Erreur réseau lors de la récupération des métadonnées") from exc
 
+
         if isinstance(result, dict):
             if endpoint == SPOTIFY_OEMBED:
                 title, artist = _enrich_spotify_metadata(client, result, link)
                 return _build_song(result, link, title=title, artist=artist)
 
             return _build_song(result, link)
+
 
     raise MetadataError("Réponse invalide du fournisseur")
