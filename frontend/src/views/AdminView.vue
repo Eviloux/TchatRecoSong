@@ -10,12 +10,7 @@
     <div v-if="!token" class="login-options">
       <p>Connectez-vous avec un compte autorisé pour gérer les recommandations.</p>
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
-      <button
-        v-if="twitchClientId"
-        type="button"
-        class="twitch-login"
-        @click="loginWithTwitch"
-      >
+      <button type="button" class="twitch-login" @click="loginWithTwitch">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false" role="img">
             <path
@@ -67,52 +62,8 @@ declare global {
   }
 }
 
-const router = useRouter();
-const route = useRoute();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
-const initialTwitchRedirect =
-  import.meta.env.VITE_TWITCH_REDIRECT_URI || `${window.location.origin}/admin`;
-const twitchRedirectUriRef = ref<string>(initialTwitchRedirect);
-
-const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
-const defaultTwitchRedirectUri = `${window.location.origin}/admin`;
-const twitchRedirectUri = ref<string>(import.meta.env.VITE_TWITCH_REDIRECT_URI || defaultTwitchRedirectUri);
-
-
-const normalizeRedirectUri = (raw?: string | null) => {
-  const fallback = `${window.location.origin}/admin`;
-  if (!raw) {
-    return fallback;
-  }
-
-  try {
-    return new URL(raw, window.location.origin).toString();
-  } catch (err) {
-    console.warn('URI de redirection Twitch invalide, utilisation du fallback.', err);
-    return fallback;
-  }
-};
-
-
-const normalizeRedirectUri = (raw?: string | null) => {
-  const fallback = `${window.location.origin}/admin`;
-  if (!raw) {
-    return fallback;
-  }
-
-  try {
-    return new URL(raw, window.location.origin).toString();
-  } catch (err) {
-    console.warn('URI de redirection Twitch invalide, utilisation du fallback.', err);
-    return fallback;
-  }
-};
-
-
-const resolvedTwitchRedirectUri = ref<string>(
-  normalizeRedirectUri(import.meta.env.VITE_TWITCH_REDIRECT_URI),
-);
 
 
 const existingSession = loadAdminSession();
@@ -122,7 +73,6 @@ const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
 let googleInitTimer: number | null = null;
-let twitchFragmentProcessing = false;
 
 const storeSession = (authToken: string, provider: string, name: string) => {
   const session = saveAdminSession(authToken, provider, name);
@@ -142,7 +92,9 @@ const handleBanRuleCreated = async () => {
   }
 };
 
-const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
+
+const callAuthEndpoint = async (endpoint: 'google', payload: Record<string, string>) => {
+
   try {
     error.value = '';
     const data = await exchangeAdminAuth(endpoint, payload);
@@ -261,21 +213,8 @@ const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
 };
 
 const loginWithTwitch = () => {
-  error.value = '';
-  if (!twitchClientId.value) {
-    error.value = 'TWITCH_CLIENT_ID manquant.';
-    return;
-  }
 
-
-  const redirectUri = resolvedTwitchRedirectUri.value;
-
-  const authorizeUrl = new URL('https://id.twitch.tv/oauth2/authorize');
-  authorizeUrl.searchParams.set('client_id', twitchClientId.value);
-  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
-  authorizeUrl.searchParams.set('response_type', 'token');
-  authorizeUrl.searchParams.set('scope', 'user:read:email');
-  window.location.href = authorizeUrl.toString();
+  error.value = "La connexion Twitch sera bientôt disponible.";
 };
 
 const fetchAuthConfig = async () => {
@@ -286,15 +225,6 @@ const fetchAuthConfig = async () => {
 
   if (data.google_client_id) {
     googleClientId.value = data.google_client_id;
-  }
-
-  if (data.twitch_client_id) {
-    twitchClientId.value = data.twitch_client_id;
-  }
-
-  if (data.twitch_redirect_uri) {
-
-    resolvedTwitchRedirectUri.value = normalizeRedirectUri(data.twitch_redirect_uri);
 
   }
 };
@@ -313,14 +243,8 @@ watch(
       scheduleGoogleInitRetry();
     }
 
-  }
-);
+  },
 
-watch(
-  () => route.hash,
-  (newHash) => {
-    void handleTwitchFragment(newHash);
-  }
 );
 
 onMounted(async () => {
@@ -346,3 +270,4 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
