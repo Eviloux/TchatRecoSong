@@ -65,6 +65,24 @@ def test_add_ban_rule_removes_matching_songs(session: Session) -> None:
     assert "https://youtube.com/watch?v=autre" in remaining
 
 
+def test_add_ban_rule_handles_unknown_artist_placeholder(session: Session) -> None:
+    session.add(
+        Song(
+            title="Zitti e Buoni",
+            artist="Artiste inconnu",
+            link="https://youtube.com/watch?v=maneskin",
+        )
+    )
+    session.commit()
+
+    ban_crud.add_ban_rule(
+        session,
+        BanRuleCreate(title="Zitti e Buoni", artist="Måneskin"),
+    )
+
+    assert session.query(Song).count() == 0
+
+
 def test_add_ban_rule_with_link_removes_song(session: Session) -> None:
     created = song_crud.add_or_increment_song(
         session,
