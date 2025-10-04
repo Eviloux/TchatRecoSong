@@ -6,8 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     headers: {
-
       'Cross-Origin-Embedder-Policy': 'unsafe-none'
     }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true
   }
 })
