@@ -10,7 +10,12 @@
     <div v-if="!token" class="login-options">
       <p>Connectez-vous avec un compte autorisé pour gérer les recommandations.</p>
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
-      <button type="button" class="twitch-login" @click="loginWithTwitch">
+      <button
+        v-if="twitchClientId"
+        type="button"
+        class="twitch-login"
+        @click="loginWithTwitch"
+      >
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false" role="img">
             <path
@@ -39,14 +44,14 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-
-import { useRoute, useRouter } from 'vue-router';
-
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
-
 import { getApiUrl } from '../utils/api';
 
+interface AdminProfile {
+  name: string;
+  provider: string;
+}
 
 type SongListHandle = {
   refresh: () => Promise<void> | void;
@@ -58,61 +63,114 @@ declare global {
   }
 }
 
-
-interface AdminProfile {
-  name: string;
-  provider: string;
-}
-
 const API_URL = getApiUrl();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
-const token = ref<string | null>(typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null);
-const storedProfile = typeof window !== 'undefined' ? localStorage.getItem('admin_profile') : null;
-let parsedProfile: AdminProfile | null = null;
-
-if (storedProfile) {
-  try {
-    const candidate = JSON.parse(storedProfile) as AdminProfile;
-    if (candidate && typeof candidate.name === 'string' && typeof candidate.provider === 'string') {
-      parsedProfile = candidate;
-    }
-  } catch (err) {
-    console.warn('Profil admin invalide, réinitialisation.', err);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin_profile');
-    }
-  }
-}
-
-const profile = ref<AdminProfile | null>(parsedProfile);
-
+const token = ref<string | null>(localStorage.getItem('admin_token'));
+const storedProfile = localStorage.getItem('admin_profile');
+const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
-let googleInitTimer: number | null = null;
+const TWITCH_STATE_KEY = 'twitch_oauth_state';
+const TWITCH_RESULT_KEY = 'twitch_oauth_result';
+
+const twitchPopup = ref<Window | null>(null);
+let twitchMessageHandler: ((event: MessageEvent) => void) | null = null;
+let twitchPopupMonitor: number | null = null;
+
+const detachTwitchMessageHandler = () => {
+  if (twitchMessageHandler) {
+    window.removeEventListener('message', twitchMessageHandler);
+    twitchMessageHandler = null;
+  }
+};
+
+const stopTwitchPopupMonitor = () => {
+  if (twitchPopupMonitor !== null) {
+    window.clearInterval(twitchPopupMonitor);
+    twitchPopupMonitor = null;
+  }
+};
+
+const closeTwitchPopup = () => {
+  if (twitchPopup.value && !twitchPopup.value.closed) {
+    twitchPopup.value.close();
+  }
+  twitchPopup.value = null;
+};
+
+const resetTwitchFlow = () => {
+  detachTwitchMessageHandler();
+  stopTwitchPopupMonitor();
+  closeTwitchPopup();
+  sessionStorage.removeItem(TWITCH_STATE_KEY);
+};
+
+const finalizeTwitchError = (message: string) => {
+  resetTwitchFlow();
+  error.value = message;
+};
+
+const finalizeTwitchSuccess = async (accessToken: string, state: string | null | undefined) => {
+  const expectedState = sessionStorage.getItem(TWITCH_STATE_KEY);
+  if (!expectedState || !state || state !== expectedState) {
+    resetTwitchFlow();
+    error.value = 'Réponse Twitch invalide ou expirée.';
+    return;
+  }
+  resetTwitchFlow();
+  await callAuthEndpoint('twitch', { access_token: accessToken });
+};
+
+const generateTwitchState = () => {
+  if (window.crypto?.getRandomValues) {
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, (value) => value.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).slice(2, 18);
+};
+
+const processTwitchResultString = async (raw: string) => {
+  try {
+    const data = JSON.parse(raw);
+    if (data?.type === 'twitch-auth-success' && typeof data.accessToken === 'string') {
+      await finalizeTwitchSuccess(data.accessToken, data.state);
+    } else if (data?.type === 'twitch-auth-error') {
+      const message = typeof data.error === 'string' && data.error ? data.error : 'Connexion Twitch refusée.';
+      finalizeTwitchError(message);
+    }
+  } catch (err) {
+    console.error('Impossible de traiter la réponse Twitch stockée', err);
+  }
+};
+
+const handleTwitchStorageEvent = (event: StorageEvent) => {
+  if (event.key === TWITCH_RESULT_KEY && event.newValue) {
+    void processTwitchResultString(event.newValue);
+    try {
+      localStorage.removeItem(TWITCH_RESULT_KEY);
+    } catch (err) {
+      console.error('Impossible de nettoyer les données Twitch du stockage', err);
+    }
+  }
+};
 
 const storeSession = (authToken: string, provider: string, name: string) => {
-
   token.value = authToken;
   profile.value = { name, provider };
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('admin_token', authToken);
-    localStorage.setItem('admin_profile', JSON.stringify(profile.value));
-  }
-
+  localStorage.setItem('admin_token', authToken);
+  localStorage.setItem('admin_profile', JSON.stringify(profile.value));
 };
 
 const logout = () => {
   token.value = null;
   profile.value = null;
-
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_profile');
-  }
-
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_profile');
 };
 
 const handleBanRuleCreated = async () => {
@@ -121,26 +179,48 @@ const handleBanRuleCreated = async () => {
   }
 };
 
-
-const callAuthEndpoint = async (endpoint: 'google', payload: Record<string, string>) => {
+const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
   if (!API_URL) {
     error.value = 'API non configurée.';
     return;
   }
-
   try {
     error.value = '';
-    const data = await exchangeAdminAuth(endpoint, payload);
+    const response = await fetch(`${API_URL}/auth/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({ detail: 'Erreur inconnue' }));
+      throw new Error(data.detail);
+    }
+    const data = await response.json();
     storeSession(data.token, data.provider, data.name);
   } catch (err: any) {
     console.error(err);
-    error.value = err?.message || 'Connexion impossible.';
+    error.value = err.message || 'Connexion impossible.';
   }
 };
 
 const handleGoogleCredential = async (response: any) => {
   error.value = '';
   await callAuthEndpoint('google', { credential: response.credential });
+};
+
+let googleInitTimer: number | null = null;
+
+const consumePendingTwitchResult = async () => {
+  try {
+    const raw = localStorage.getItem(TWITCH_RESULT_KEY);
+    if (!raw) {
+      return;
+    }
+    localStorage.removeItem(TWITCH_RESULT_KEY);
+    await processTwitchResultString(raw);
+  } catch (err) {
+    console.error('Impossible de lire le résultat Twitch stocké', err);
+  }
 };
 
 const ensureGoogleButton = async () => {
@@ -171,7 +251,6 @@ const scheduleGoogleInitRetry = () => {
   if (googleInitTimer !== null) {
     return;
   }
-
   googleInitTimer = window.setInterval(() => {
     if (window.google?.accounts?.id) {
       ensureGoogleButton();
@@ -183,51 +262,82 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
-
 const loginWithTwitch = () => {
-  error.value = 'La connexion Twitch sera bientôt disponible.';
+  error.value = '';
+  if (!twitchClientId.value) {
+    error.value = 'Identifiant client Twitch manquant.';
+    return;
+  }
 
+  const redirectUri = `${window.location.origin}/twitch-callback`;
+  const state = generateTwitchState();
+  sessionStorage.setItem(TWITCH_STATE_KEY, state);
+
+  const url = new URL('https://id.twitch.tv/oauth2/authorize');
+  url.searchParams.set('client_id', twitchClientId.value);
+  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('response_type', 'token');
+  url.searchParams.set('scope', 'user:read:email');
+  url.searchParams.set('state', state);
+
+  detachTwitchMessageHandler();
+  twitchMessageHandler = async (event: MessageEvent) => {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+    const data = event.data;
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+    if (data.type === 'twitch-auth-success' && typeof data.accessToken === 'string') {
+      await finalizeTwitchSuccess(data.accessToken, data.state);
+    } else if (data.type === 'twitch-auth-error') {
+      const message = typeof data.error === 'string' && data.error ? data.error : 'Connexion Twitch refusée.';
+      finalizeTwitchError(message);
+    }
+  };
+  window.addEventListener('message', twitchMessageHandler);
+
+  stopTwitchPopupMonitor();
+  const features = 'width=500,height=700,menubar=no,toolbar=no,status=no';
+  const popup = window.open(url.toString(), 'twitch-oauth', features);
+  if (!popup) {
+    sessionStorage.removeItem(TWITCH_STATE_KEY);
+    detachTwitchMessageHandler();
+    error.value = 'Autorisez les pop-ups pour continuer avec Twitch.';
+    return;
+  }
+  twitchPopup.value = popup;
+
+  twitchPopupMonitor = window.setInterval(() => {
+    if (!twitchPopup.value || twitchPopup.value.closed) {
+      if (twitchPopupMonitor !== null) {
+        window.clearInterval(twitchPopupMonitor);
+        twitchPopupMonitor = null;
+      }
+      const hadState = sessionStorage.getItem(TWITCH_STATE_KEY);
+      resetTwitchFlow();
+      if (hadState) {
+        error.value = 'Connexion Twitch annulée.';
+      }
+    }
+  }, 500);
 };
 
-const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
-  if (twitchFragmentProcessing) {
-    return false;
-  }
-
-  const rawHash = typeof hash === 'string' && hash.length > 0 ? hash : window.location.hash;
-  if (!rawHash) {
-    return false;
-  }
-
-  const trimmed = rawHash.startsWith('#') ? rawHash.slice(1) : rawHash;
-  if (!trimmed) {
-    return false;
-  }
-
-  const params = new URLSearchParams(trimmed);
-  const hasRelevantParams =
-    params.has('access_token') || params.has('error') || params.has('error_description');
-
-  if (!hasRelevantParams) {
-    return false;
-  }
-
-  twitchFragmentProcessing = true;
-  cleanupTwitchFragment();
-
+const fetchAuthConfig = async () => {
+  if (!API_URL) return;
   try {
-    const errorParam = params.get('error');
-    const errorDescription = params.get('error_description');
-    const accessToken = params.get('access_token');
-
-    if (errorParam) {
-      error.value = errorDescription || errorParam;
-      return true;
+    const response = await fetch(`${API_URL}/auth/config`);
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.google_client_id) {
+      googleClientId.value = data.google_client_id;
     }
-
+    if (data.twitch_client_id) {
+      twitchClientId.value = data.twitch_client_id;
+    }
   } catch (err) {
     console.error('Impossible de récupérer la configuration auth', err);
-
   }
 };
 
@@ -236,33 +346,20 @@ watch(googleClientId, () => {
   scheduleGoogleInitRetry();
 });
 
-watch(
-  () => token.value,
-  async (newToken) => {
-    if (newToken === null) {
-      await nextTick();
-      ensureGoogleButton();
-      scheduleGoogleInitRetry();
-    }
-
-  },
-
-);
+watch(token, async (newToken) => {
+  if (newToken === null) {
+    await nextTick();
+    ensureGoogleButton();
+    scheduleGoogleInitRetry();
+  }
+});
 
 onMounted(async () => {
-  const twitchHandled = await handleTwitchFragment(route.hash);
-
-
+  window.addEventListener('storage', handleTwitchStorageEvent);
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
+  await consumePendingTwitchResult();
   ensureGoogleButton();
-
-  if (twitchHandled && token.value) {
-    // refresh the admin list when a Twitch login has just been processed
-    if (songListRef.value) {
-      void songListRef.value.refresh();
-    }
-  }
 });
 
 onBeforeUnmount(() => {
@@ -270,6 +367,7 @@ onBeforeUnmount(() => {
     window.clearInterval(googleInitTimer);
     googleInitTimer = null;
   }
+  window.removeEventListener('storage', handleTwitchStorageEvent);
+  resetTwitchFlow();
 });
 </script>
-

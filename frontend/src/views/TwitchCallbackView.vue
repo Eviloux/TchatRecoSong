@@ -1,67 +1,115 @@
 <template>
   <section class="twitch-callback">
-    <p v-if="status === 'loading'">Connexion à Twitch…</p>
-    <p v-else-if="status === 'success'">Connexion réussie, redirection en cours…</p>
-    <p v-else class="error">{{ error }}</p>
+    <h2>Connexion Twitch</h2>
+    <p>Vous pouvez fermer cette fenêtre.</p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { exchangeAdminAuth } from '../services/adminAuth';
-import { saveAdminSession } from '../utils/adminSession';
+import { onMounted } from 'vue';
 
-type Status = 'loading' | 'success' | 'error';
+const RESULT_STORAGE_KEY = 'twitch_oauth_result';
 
-const status = ref<Status>('loading');
-const error = ref('');
-const router = useRouter();
+interface TwitchResult {
+  type: 'twitch-auth-success' | 'twitch-auth-error';
+  accessToken?: string;
+  state?: string | null;
+  error?: string;
+}
 
-const parseAccessToken = (): string | null => {
-  if (!window.location.hash) {
-    return null;
+const sendResultToOpener = (payload: TwitchResult) => {
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(payload, window.location.origin);
+      return true;
+    }
+  } catch (err) {
+    console.error("Impossible d'envoyer le résultat Twitch à la fenêtre parente", err);
   }
-  const params = new URLSearchParams(window.location.hash.replace('#', ''));
-  return params.get('access_token');
+  return false;
 };
 
-onMounted(async () => {
-  const accessToken = parseAccessToken();
-  if (!accessToken) {
-    status.value = 'error';
-    error.value = 'Authentification Twitch annulée ou invalide.';
-    return;
-  }
-
+const storeResultFallback = (payload: TwitchResult) => {
   try {
-    const data = await exchangeAdminAuth('twitch', { access_token: accessToken });
-    saveAdminSession(data.token, data.provider, data.name);
-    status.value = 'success';
-    await router.replace({ name: 'admin' });
-  } catch (err: any) {
-    console.error(err);
-    status.value = 'error';
-    error.value = err?.message || 'Connexion impossible.';
+    localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.error('Impossible de stocker le résultat Twitch', err);
+  }
+};
+
+const extractHashParams = () => {
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  return new URLSearchParams(hash);
+};
+
+onMounted(() => {
+  try {
+    const params = extractHashParams();
+    const accessToken = params.get('access_token') || undefined;
+    const state = params.get('state');
+    const errorDescription = params.get('error_description') || params.get('error') || undefined;
+
+    if (accessToken) {
+      const payload: TwitchResult = {
+        type: 'twitch-auth-success',
+        accessToken,
+        state,
+      };
+      if (!sendResultToOpener(payload)) {
+        storeResultFallback(payload);
+        window.location.replace('/admin');
+      }
+    } else {
+      const payload: TwitchResult = {
+        type: 'twitch-auth-error',
+        state,
+        error: errorDescription || "Impossible de finaliser l'authentification Twitch.",
+      };
+      if (!sendResultToOpener(payload)) {
+        storeResultFallback(payload);
+        window.location.replace('/admin');
+      }
+    }
+  } catch (err) {
+    console.error('Erreur inattendue lors du traitement du callback Twitch', err);
+    const payload: TwitchResult = {
+      type: 'twitch-auth-error',
+      error: 'Erreur inattendue lors du traitement de la réponse Twitch.',
+    };
+    if (!sendResultToOpener(payload)) {
+      storeResultFallback(payload);
+      window.location.replace('/admin');
+    }
   } finally {
-    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+      try {
+        window.close();
+      } catch (err) {
+        console.error('Impossible de fermer la fenêtre Twitch', err);
+      }
+    }, 100);
   }
 });
 </script>
 
 <style scoped>
 .twitch-callback {
-  min-height: 60vh;
   display: flex;
+  min-height: 100vh;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
   text-align: center;
+  padding: 2rem;
 }
 
-.error {
-  color: #ff5a5f;
+.twitch-callback h2 {
+  font-size: 1.5rem;
   font-weight: 600;
+}
+
+.twitch-callback p {
+  color: #555;
 }
 </style>
