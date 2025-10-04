@@ -44,7 +44,9 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
 import { useRoute, useRouter } from 'vue-router';
+
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
 import { exchangeAdminAuth, fetchAuthConfigFromApi } from '../services/adminAuth';
@@ -69,7 +71,14 @@ const router = useRouter();
 const route = useRoute();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+const initialTwitchRedirect =
+  import.meta.env.VITE_TWITCH_REDIRECT_URI || `${window.location.origin}/admin`;
+const twitchRedirectUriRef = ref<string>(initialTwitchRedirect);
+
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
+const defaultTwitchRedirectUri = `${window.location.origin}/admin`;
+const twitchRedirectUri = ref<string>(import.meta.env.VITE_TWITCH_REDIRECT_URI || defaultTwitchRedirectUri);
+
 
 const normalizeRedirectUri = (raw?: string | null) => {
   const fallback = `${window.location.origin}/admin`;
@@ -86,6 +95,7 @@ const normalizeRedirectUri = (raw?: string | null) => {
 };
 
 const twitchRedirectUri = ref<string>(normalizeRedirectUri(import.meta.env.VITE_TWITCH_REDIRECT_URI));
+
 
 const existingSession = loadAdminSession();
 const token = ref<string | null>(existingSession?.token ?? null);
@@ -239,6 +249,7 @@ const loginWithTwitch = () => {
     return;
   }
 
+
   const redirectUri = twitchRedirectUri.value;
   const authorizeUrl = new URL('https://id.twitch.tv/oauth2/authorize');
   authorizeUrl.searchParams.set('client_id', twitchClientId.value);
@@ -264,6 +275,7 @@ const fetchAuthConfig = async () => {
 
   if (data.twitch_redirect_uri) {
     twitchRedirectUri.value = normalizeRedirectUri(data.twitch_redirect_uri);
+
   }
 };
 
@@ -291,7 +303,9 @@ watch(
 );
 
 onMounted(async () => {
+
   const twitchHandled = await handleTwitchFragment(route.hash);
+
 
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
