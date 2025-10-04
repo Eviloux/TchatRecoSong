@@ -92,6 +92,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+
   // Prevent path traversal and normalise the request path relative to the dist directory
   const sanitizedPath = pathname.replace(/\.\.+/g, '.').replace(/^\/+/, '');
   const candidatePath = resolve(distDir, sanitizedPath);
@@ -125,6 +126,7 @@ const server = createServer(async (req, res) => {
       res.end('Not Found');
       return;
     }
+
   }
 
   sendFile(req, res, indexPath);
