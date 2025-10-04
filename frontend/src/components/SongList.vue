@@ -4,8 +4,7 @@
       <h2>Recommandations enregistrées</h2>
       <button type="button" @click="fetchSongs">Rafraîchir</button>
     </header>
-    <p v-if="loadError" class="song-list__error">{{ loadError }}</p>
-    <ul v-else-if="songs.length" class="song-list__items">
+    <ul v-if="songs.length" class="song-list__items">
       <li v-for="song in songs" :key="song.id" class="song-card">
         <div class="song-card__info">
           <h3>{{ song.title }}</h3>
@@ -63,7 +62,6 @@ const songs = ref<Song[]>([]);
 const voting = ref<number | null>(null);
 const deleting = ref<number | null>(null);
 const votedSongs = ref<Set<number>>(new Set());
-const loadError = ref('');
 
 const STORAGE_KEY = 'tchatreco:votedSongs';
 
@@ -91,25 +89,13 @@ const persistVotes = () => {
 };
 
 const fetchSongs = async () => {
-  if (!API_URL) {
-    loadError.value = "VITE_API_URL n'est pas configurée.";
-    return;
-  }
+  if (!API_URL) return;
   try {
-    loadError.value = '';
     const response = await fetch(`${API_URL}/songs/`);
-    if (!response.ok) {
-      const message =
-        response.status === 503
-          ? 'Service de recommandations temporairement indisponible (503).'
-          : `Erreur serveur (${response.status})`;
-      throw new Error(message);
-    }
+    if (!response.ok) throw new Error('Erreur serveur');
     songs.value = await response.json();
   } catch (error) {
     console.error('Impossible de récupérer les chansons', error);
-    loadError.value =
-      error instanceof Error ? error.message : "Impossible de récupérer les chansons.";
   }
 };
 
@@ -169,11 +155,3 @@ defineExpose({
   hasVoted,
 });
 </script>
-
-<style scoped>
-.song-list__error {
-  color: #ff5a5f;
-  font-weight: 600;
-  margin: 0 0 1rem;
-}
-</style>
