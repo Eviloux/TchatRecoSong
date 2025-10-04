@@ -355,6 +355,29 @@ watch(token, async (newToken) => {
 });
 
 onMounted(async () => {
+  if (window.location.pathname === '/admin' && window.location.hash) {
+    const fragment = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const params = new URLSearchParams(fragment);
+    const accessToken = params.get('access_token') || '';
+    const errorCode = params.get('error') || '';
+    const hasAccessToken = accessToken.length > 0;
+    const hasError = errorCode.length > 0;
+    if (hasAccessToken || hasError) {
+      try {
+        if (hasAccessToken) {
+          await finalizeTwitchSuccess(accessToken, params.get('state'));
+        } else if (hasError) {
+          const description = params.get('error_description') || errorCode || 'Connexion Twitch refusée.';
+          finalizeTwitchError(description);
+        }
+      } finally {
+        history.replaceState(null, document.title, `${window.location.pathname}${window.location.search}`);
+      }
+    }
+  }
+
   window.addEventListener('storage', handleTwitchStorageEvent);
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
