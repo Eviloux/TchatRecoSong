@@ -1,7 +1,7 @@
 import { createServer } from 'http';
-import { parse } from 'url';
-import { extname, join, dirname } from 'path';
-import { createReadStream, existsSync, lstatSync } from 'fs';
+import { extname, join, dirname, resolve } from 'path';
+import { createReadStream } from 'fs';
+import { access, stat } from 'fs/promises';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +47,33 @@ function sendFile(req, res, filePath, status = 200) {
   createReadStream(filePath).pipe(res);
 }
 
+async function fileExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function wantsSpaFallback(pathname, req) {
+  if (pathname === '/' || pathname === '') {
+    return true;
+  }
+
+  const hasExtension = extname(pathname) !== '';
+  if (hasExtension) {
+    return false;
+  }
+
+  const acceptHeader = req.headers['accept'];
+  if (acceptHeader && acceptHeader.includes('text/html')) {
+    return true;
+  }
+
+  return true;
+}
+
 const server = createServer(async (req, res) => {
   if (!req.url) {
     res.statusCode = 400;
@@ -54,58 +81,53 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const { pathname } = parse(req.url);
-  const safePath = pathname?.replace(/\.\./g, '') || '/';
-  const decodedPath = decodeURIComponent(safePath);
+  const requestUrl = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+  let pathname = decodeURIComponent(requestUrl.pathname);
 
-  if (decodedPath === '/') {
+  if (pathname === '/') {
     res.statusCode = 302;
     res.setHeader('Location', '/submit');
     setCommonHeaders(res);
     res.end();
     return;
   }
-  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
 
-    sendFile(req, res, indexPath);
+  // Prevent path traversal and normalise the request path relative to the dist directory
+  const sanitizedPath = pathname.replace(/\.\.+/g, '.').replace(/^\/+/, '');
+  const candidatePath = resolve(distDir, sanitizedPath);
+
+  if (!candidatePath.startsWith(distDir)) {
+    res.statusCode = 403;
+    setCommonHeaders(res);
+    res.end('Forbidden');
     return;
   }
-
-  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
-    sendFile(req, res, indexPath);
-    return;
-  }
-
-
-  const normalized = decodedPath.replace(/^\/+/, '');
-  const hasExtension = extname(normalized) !== '';
-  const candidate = join(distDir, normalized || 'index.html');
-  const fileExists = existsSync(candidate) && lstatSync(candidate).isFile();
-  const acceptsHtml = (req.headers.accept ?? '').includes('text/html');
 
   try {
-    if (hasExtension && fileExists) {
-      sendFile(req, res, candidate);
+    const stats = await stat(candidatePath);
+
+    if (stats.isFile()) {
+      sendFile(req, res, candidatePath);
       return;
     }
 
-    if (!hasExtension || acceptsHtml) {
-      sendFile(req, res, indexPath);
-      return;
+    if (stats.isDirectory()) {
+      const nestedIndex = join(candidatePath, 'index.html');
+      if (await fileExists(nestedIndex)) {
+        sendFile(req, res, nestedIndex);
+        return;
+      }
     }
-
-    if (hasExtension) {
-      setCommonHeaders(res);
+  } catch (error) {
+    if (!wantsSpaFallback(sanitizedPath, req)) {
       res.statusCode = 404;
+      setCommonHeaders(res);
       res.end('Not Found');
       return;
     }
-  } catch (err) {
-    res.statusCode = 500;
-    setCommonHeaders(res);
-    res.end('Internal Server Error');
-    console.error('Failed to serve request', err);
   }
+
+  sendFile(req, res, indexPath);
 });
 
 const port = Number(process.env.PORT ?? 4173);
