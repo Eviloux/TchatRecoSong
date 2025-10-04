@@ -44,14 +44,16 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
-import { getApiUrl } from '../utils/api';
-
-interface AdminProfile {
-  name: string;
-  provider: string;
-}
+import { exchangeAdminAuth, fetchAuthConfigFromApi } from '../services/adminAuth';
+import {
+  AdminProfile,
+  clearAdminSession,
+  loadAdminSession,
+  saveAdminSession,
+} from '../utils/adminSession';
 
 type SongListHandle = {
   refresh: () => Promise<void> | void;
@@ -63,29 +65,47 @@ declare global {
   }
 }
 
-const API_URL = getApiUrl();
+const router = useRouter();
+const route = useRoute();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
-const token = ref<string | null>(localStorage.getItem('admin_token'));
-const storedProfile = localStorage.getItem('admin_profile');
-const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
+const normalizeRedirectUri = (raw?: string | null) => {
+  const fallback = `${window.location.origin}/admin`;
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    return new URL(raw, window.location.origin).toString();
+  } catch (err) {
+    console.warn('URI de redirection Twitch invalide, utilisation du fallback.', err);
+    return fallback;
+  }
+};
+
+const twitchRedirectUriState = ref<string>(normalizeRedirectUri(import.meta.env.VITE_TWITCH_REDIRECT_URI));
+
+const existingSession = loadAdminSession();
+const token = ref<string | null>(existingSession?.token ?? null);
+const profile = ref<AdminProfile | null>(existingSession?.profile ?? null);
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
+let googleInitTimer: number | null = null;
+let twitchFragmentProcessing = false;
+
 const storeSession = (authToken: string, provider: string, name: string) => {
-  token.value = authToken;
-  profile.value = { name, provider };
-  localStorage.setItem('admin_token', authToken);
-  localStorage.setItem('admin_profile', JSON.stringify(profile.value));
+  const session = saveAdminSession(authToken, provider, name);
+  token.value = session.token;
+  profile.value = session.profile;
 };
 
 const logout = () => {
   token.value = null;
   profile.value = null;
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_profile');
+  clearAdminSession();
 };
 
 const handleBanRuleCreated = async () => {
@@ -95,26 +115,13 @@ const handleBanRuleCreated = async () => {
 };
 
 const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
-  if (!API_URL) {
-    error.value = 'API non configurée.';
-    return;
-  }
   try {
     error.value = '';
-    const response = await fetch(`${API_URL}/auth/${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({ detail: 'Erreur inconnue' }));
-      throw new Error(data.detail);
-    }
-    const data = await response.json();
+    const data = await exchangeAdminAuth(endpoint, payload);
     storeSession(data.token, data.provider, data.name);
   } catch (err: any) {
     console.error(err);
-    error.value = err.message || 'Connexion impossible.';
+    error.value = err?.message || 'Connexion impossible.';
   }
 };
 
@@ -122,8 +129,6 @@ const handleGoogleCredential = async (response: any) => {
   error.value = '';
   await callAuthEndpoint('google', { credential: response.credential });
 };
-
-let googleInitTimer: number | null = null;
 
 const ensureGoogleButton = async () => {
   if (!googleClientId.value || !window.google?.accounts?.id) {
@@ -153,6 +158,7 @@ const scheduleGoogleInitRetry = () => {
   if (googleInitTimer !== null) {
     return;
   }
+
   googleInitTimer = window.setInterval(() => {
     if (window.google?.accounts?.id) {
       ensureGoogleButton();
@@ -164,45 +170,100 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
+const normalizeAdminUrl = () => {
+  const resolved = router.resolve({ name: 'admin' });
+  return new URL(resolved.href, window.location.origin).toString();
+};
+
+const cleanupTwitchFragment = () => {
+  const absoluteAdmin = normalizeAdminUrl();
+  window.history.replaceState({}, document.title, absoluteAdmin);
+  if (route.name !== 'admin' || route.hash) {
+    router.replace({ name: 'admin', hash: undefined }).catch(() => {
+      // Ignorer les échecs de navigation redondants
+    });
+  }
+};
+
+const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
+  if (twitchFragmentProcessing) {
+    return false;
+  }
+
+  const rawHash = typeof hash === 'string' && hash.length > 0 ? hash : window.location.hash;
+  if (!rawHash) {
+    return false;
+  }
+
+  const trimmed = rawHash.startsWith('#') ? rawHash.slice(1) : rawHash;
+  if (!trimmed) {
+    return false;
+  }
+
+  const params = new URLSearchParams(trimmed);
+  const hasRelevantParams =
+    params.has('access_token') || params.has('error') || params.has('error_description');
+
+  if (!hasRelevantParams) {
+    return false;
+  }
+
+  twitchFragmentProcessing = true;
+  cleanupTwitchFragment();
+
+  try {
+    const errorParam = params.get('error');
+    const errorDescription = params.get('error_description');
+    const accessToken = params.get('access_token');
+
+    if (errorParam) {
+      error.value = errorDescription || errorParam;
+      return true;
+    }
+
+    if (!accessToken) {
+      return true;
+    }
+
+    await callAuthEndpoint('twitch', { access_token: accessToken });
+    return true;
+  } finally {
+    twitchFragmentProcessing = false;
+  }
+};
+
 const loginWithTwitch = () => {
   error.value = '';
   if (!twitchClientId.value) {
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
-  const redirectUri = `${window.location.origin}/admin`;
-  const url = new URL('https://id.twitch.tv/oauth2/authorize');
-  url.searchParams.set('client_id', twitchClientId.value);
-  url.searchParams.set('redirect_uri', redirectUri);
-  url.searchParams.set('response_type', 'token');
-  url.searchParams.set('scope', 'user:read:email');
-  window.location.href = url.toString();
-};
 
-const checkTwitchRedirect = async () => {
-  if (!window.location.hash) return;
-  const params = new URLSearchParams(window.location.hash.replace('#', ''));
-  const accessToken = params.get('access_token');
-  if (accessToken) {
-    await callAuthEndpoint('twitch', { access_token: accessToken });
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
+  const redirectUri = twitchRedirectUriState.value;
+  const authorizeUrl = new URL('https://id.twitch.tv/oauth2/authorize');
+  authorizeUrl.searchParams.set('client_id', twitchClientId.value);
+  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+  authorizeUrl.searchParams.set('response_type', 'token');
+  authorizeUrl.searchParams.set('scope', 'user:read:email');
+  window.location.href = authorizeUrl.toString();
 };
 
 const fetchAuthConfig = async () => {
-  if (!API_URL) return;
-  try {
-    const response = await fetch(`${API_URL}/auth/config`);
-    if (!response.ok) return;
-    const data = await response.json();
-    if (data.google_client_id) {
-      googleClientId.value = data.google_client_id;
-    }
-    if (data.twitch_client_id) {
-      twitchClientId.value = data.twitch_client_id;
-    }
-  } catch (err) {
-    console.error('Impossible de récupérer la configuration auth', err);
+  const data = await fetchAuthConfigFromApi();
+  if (!data) {
+    return;
+  }
+
+  if (data.google_client_id) {
+    googleClientId.value = data.google_client_id;
+  }
+
+  if (data.twitch_client_id) {
+    twitchClientId.value = data.twitch_client_id;
+  }
+
+  if (data.twitch_redirect_uri) {
+    twitchRedirectUriState.value = normalizeRedirectUri(data.twitch_redirect_uri);
   }
 };
 
@@ -211,19 +272,37 @@ watch(googleClientId, () => {
   scheduleGoogleInitRetry();
 });
 
-watch(token, async (newToken) => {
-  if (newToken === null) {
-    await nextTick();
-    ensureGoogleButton();
-    scheduleGoogleInitRetry();
+watch(
+  () => token.value,
+  async (newToken) => {
+    if (newToken === null) {
+      await nextTick();
+      ensureGoogleButton();
+      scheduleGoogleInitRetry();
+    }
   }
-});
+);
+
+watch(
+  () => route.hash,
+  (newHash) => {
+    void handleTwitchFragment(newHash);
+  }
+);
 
 onMounted(async () => {
+  const twitchHandled = await handleTwitchFragment(route.hash);
+
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
-  await checkTwitchRedirect();
   ensureGoogleButton();
+
+  if (twitchHandled && token.value) {
+    // refresh the admin list when a Twitch login has just been processed
+    if (songListRef.value) {
+      void songListRef.value.refresh();
+    }
+  }
 });
 
 onBeforeUnmount(() => {
