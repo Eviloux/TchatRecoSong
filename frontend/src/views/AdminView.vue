@@ -74,6 +74,94 @@ const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfil
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
+<<<<<<< HEAD
+=======
+const TWITCH_STATE_KEY = 'twitch_oauth_state';
+const TWITCH_RESULT_KEY = 'twitch_oauth_result';
+
+const twitchPopup = ref<Window | null>(null);
+let twitchMessageHandler: ((event: MessageEvent) => void) | null = null;
+let twitchPopupMonitor: number | null = null;
+
+const detachTwitchMessageHandler = () => {
+  if (twitchMessageHandler) {
+    window.removeEventListener('message', twitchMessageHandler);
+    twitchMessageHandler = null;
+  }
+};
+
+const stopTwitchPopupMonitor = () => {
+  if (twitchPopupMonitor !== null) {
+    window.clearInterval(twitchPopupMonitor);
+    twitchPopupMonitor = null;
+  }
+};
+
+const closeTwitchPopup = () => {
+  if (twitchPopup.value && !twitchPopup.value.closed) {
+    twitchPopup.value.close();
+  }
+  twitchPopup.value = null;
+};
+
+const resetTwitchFlow = () => {
+  detachTwitchMessageHandler();
+  stopTwitchPopupMonitor();
+  closeTwitchPopup();
+  sessionStorage.removeItem(TWITCH_STATE_KEY);
+};
+
+const finalizeTwitchError = (message: string) => {
+  resetTwitchFlow();
+  error.value = message;
+};
+
+const finalizeTwitchSuccess = async (accessToken: string, state: string | null | undefined) => {
+  const expectedState = sessionStorage.getItem(TWITCH_STATE_KEY);
+  if (!expectedState || !state || state !== expectedState) {
+    resetTwitchFlow();
+    error.value = 'Réponse Twitch invalide ou expirée.';
+    return;
+  }
+  resetTwitchFlow();
+  await callAuthEndpoint('twitch', { access_token: accessToken });
+};
+
+const generateTwitchState = () => {
+  if (window.crypto?.getRandomValues) {
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, (value) => value.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).slice(2, 18);
+};
+
+const processTwitchResultString = async (raw: string) => {
+  try {
+    const data = JSON.parse(raw);
+    if (data?.type === 'twitch-auth-success' && typeof data.accessToken === 'string') {
+      await finalizeTwitchSuccess(data.accessToken, data.state);
+    } else if (data?.type === 'twitch-auth-error') {
+      const message = typeof data.error === 'string' && data.error ? data.error : 'Connexion Twitch refusée.';
+      finalizeTwitchError(message);
+    }
+  } catch (err) {
+    console.error('Impossible de traiter la réponse Twitch stockée', err);
+  }
+};
+
+const handleTwitchStorageEvent = (event: StorageEvent) => {
+  if (event.key === TWITCH_RESULT_KEY && event.newValue) {
+    void processTwitchResultString(event.newValue);
+    try {
+      localStorage.removeItem(TWITCH_RESULT_KEY);
+    } catch (err) {
+      console.error('Impossible de nettoyer les données Twitch du stockage', err);
+    }
+  }
+};
+
+>>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
 const storeSession = (authToken: string, provider: string, name: string) => {
   token.value = authToken;
   profile.value = { name, provider };
@@ -125,6 +213,22 @@ const handleGoogleCredential = async (response: any) => {
 
 let googleInitTimer: number | null = null;
 
+<<<<<<< HEAD
+=======
+const consumePendingTwitchResult = async () => {
+  try {
+    const raw = localStorage.getItem(TWITCH_RESULT_KEY);
+    if (!raw) {
+      return;
+    }
+    localStorage.removeItem(TWITCH_RESULT_KEY);
+    await processTwitchResultString(raw);
+  } catch (err) {
+    console.error('Impossible de lire le résultat Twitch stocké', err);
+  }
+};
+
+>>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
 const ensureGoogleButton = async () => {
   if (!googleClientId.value || !window.google?.accounts?.id) {
     return;
@@ -167,15 +271,27 @@ const scheduleGoogleInitRetry = () => {
 const loginWithTwitch = () => {
   error.value = '';
   if (!twitchClientId.value) {
+<<<<<<< HEAD
     error.value = 'TWITCH_CLIENT_ID manquant.';
     return;
   }
   const redirectUri = `${window.location.origin}/admin`;
+=======
+    error.value = 'Identifiant client Twitch manquant.';
+    return;
+  }
+
+  const redirectUri = `${window.location.origin}/twitch-callback`;
+  const state = generateTwitchState();
+  sessionStorage.setItem(TWITCH_STATE_KEY, state);
+
+>>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
   const url = new URL('https://id.twitch.tv/oauth2/authorize');
   url.searchParams.set('client_id', twitchClientId.value);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'token');
   url.searchParams.set('scope', 'user:read:email');
+<<<<<<< HEAD
   window.location.href = url.toString();
 };
 
@@ -189,6 +305,54 @@ const checkTwitchRedirect = async () => {
   }
 };
 
+=======
+  url.searchParams.set('state', state);
+
+  detachTwitchMessageHandler();
+  twitchMessageHandler = async (event: MessageEvent) => {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+    const data = event.data;
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+    if (data.type === 'twitch-auth-success' && typeof data.accessToken === 'string') {
+      await finalizeTwitchSuccess(data.accessToken, data.state);
+    } else if (data.type === 'twitch-auth-error') {
+      const message = typeof data.error === 'string' && data.error ? data.error : 'Connexion Twitch refusée.';
+      finalizeTwitchError(message);
+    }
+  };
+  window.addEventListener('message', twitchMessageHandler);
+
+  stopTwitchPopupMonitor();
+  const features = 'width=500,height=700,menubar=no,toolbar=no,status=no';
+  const popup = window.open(url.toString(), 'twitch-oauth', features);
+  if (!popup) {
+    sessionStorage.removeItem(TWITCH_STATE_KEY);
+    detachTwitchMessageHandler();
+    error.value = 'Autorisez les pop-ups pour continuer avec Twitch.';
+    return;
+  }
+  twitchPopup.value = popup;
+
+  twitchPopupMonitor = window.setInterval(() => {
+    if (!twitchPopup.value || twitchPopup.value.closed) {
+      if (twitchPopupMonitor !== null) {
+        window.clearInterval(twitchPopupMonitor);
+        twitchPopupMonitor = null;
+      }
+      const hadState = sessionStorage.getItem(TWITCH_STATE_KEY);
+      resetTwitchFlow();
+      if (hadState) {
+        error.value = 'Connexion Twitch annulée.';
+      }
+    }
+  }, 500);
+};
+
+>>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
 const fetchAuthConfig = async () => {
   if (!API_URL) return;
   try {
@@ -220,9 +384,16 @@ watch(token, async (newToken) => {
 });
 
 onMounted(async () => {
+<<<<<<< HEAD
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
   await checkTwitchRedirect();
+=======
+  window.addEventListener('storage', handleTwitchStorageEvent);
+  scheduleGoogleInitRetry();
+  await fetchAuthConfig();
+  await consumePendingTwitchResult();
+>>>>>>> origin/codex/restore-code-from-merge-pr-#42-2x13fr
   ensureGoogleButton();
 });
 
@@ -231,5 +402,7 @@ onBeforeUnmount(() => {
     window.clearInterval(googleInitTimer);
     googleInitTimer = null;
   }
+  window.removeEventListener('storage', handleTwitchStorageEvent);
+  resetTwitchFlow();
 });
 </script>
