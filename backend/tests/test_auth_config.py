@@ -10,9 +10,7 @@ from app.api.routes import auth
 
 def test_auth_config_returns_public_ids(monkeypatch):
     monkeypatch.setattr(auth, "GOOGLE_CLIENT_ID", "google-id", raising=False)
-    monkeypatch.setattr(auth, "TWITCH_CLIENT_ID", "twitch-id", raising=False)
 
     assert auth.auth_config() == {
         "google_client_id": "google-id",
-        "twitch_client_id": "twitch-id",
     }

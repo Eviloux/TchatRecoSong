@@ -65,13 +65,8 @@ ADMIN_TOKEN_TTL_MINUTES = int(_raw_admin_ttl or "720")
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
-TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
-
 _raw_allowed_google = os.getenv("ALLOWED_GOOGLE_EMAILS", "")
 ALLOWED_GOOGLE_EMAILS = set(_split_env(_raw_allowed_google))
-
-_raw_allowed_twitch = os.getenv("ALLOWED_TWITCH_LOGINS", "")
-ALLOWED_TWITCH_LOGINS = set(_split_env(_raw_allowed_twitch))
 
 
 def log_environment_configuration() -> None:
@@ -97,11 +92,7 @@ def log_environment_configuration() -> None:
         logger.info("ADMIN_TOKEN_TTL_MINUTES non définie, valeur par défaut: 720")
 
     _log_env_value("GOOGLE_CLIENT_ID", GOOGLE_CLIENT_ID)
-    _log_env_value("TWITCH_CLIENT_ID", TWITCH_CLIENT_ID)
 
     _log_env_value("ALLOWED_GOOGLE_EMAILS", _raw_allowed_google)
     _log_collection("ALLOWED_GOOGLE_EMAILS", sorted(ALLOWED_GOOGLE_EMAILS))
-
-    _log_env_value("ALLOWED_TWITCH_LOGINS", _raw_allowed_twitch)
-    _log_collection("ALLOWED_TWITCH_LOGINS", sorted(ALLOWED_TWITCH_LOGINS))
 
