@@ -69,3 +69,41 @@ def test_build_song_prefers_overrides():
 
     assert created.title == "Actual Title"
     assert created.artist == "Actual Artist"
+
+
+
+def test_fetch_song_metadata_spotify_uses_open_client(monkeypatch):
+    class DummyClient:
+        last_instance = None
+
+        def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
+            self.closed = False
+            DummyClient.last_instance = self
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # pragma: no cover - nothing special to do
+            del exc_type, exc, tb
+            self.closed = True
+
+    def fake_fetch(client, endpoint, url):  # pylint: disable=unused-argument
+        assert isinstance(client, DummyClient)
+        return {"title": "Fallback", "thumbnail_url": None}
+
+    def fake_enrich(client, result, link):  # pylint: disable=unused-argument
+        assert isinstance(client, DummyClient)
+        assert not client.closed, "Client should still be open when enriching"
+        return "Parsed Title", "Parsed Artist"
+
+    monkeypatch.setattr(song_metadata.httpx, "Client", DummyClient)
+    monkeypatch.setattr(song_metadata, "_fetch_oembed", fake_fetch)
+    monkeypatch.setattr(song_metadata, "_enrich_spotify_metadata", fake_enrich)
+
+    created = song_metadata.fetch_song_metadata("https://open.spotify.com/track/123")
+
+    assert created.title == "Parsed Title"
+    assert created.artist == "Parsed Artist"
+    assert DummyClient.last_instance is not None
+    assert DummyClient.last_instance.closed
+
