@@ -97,6 +97,24 @@ const normalizeRedirectUri = (raw?: string | null) => {
 const twitchRedirectUri = ref<string>(normalizeRedirectUri(import.meta.env.VITE_TWITCH_REDIRECT_URI));
 
 
+
+const normalizeRedirectUri = (raw?: string | null) => {
+  const fallback = `${window.location.origin}/admin`;
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    return new URL(raw, window.location.origin).toString();
+  } catch (err) {
+    console.warn('URI de redirection Twitch invalide, utilisation du fallback.', err);
+    return fallback;
+  }
+};
+
+const twitchRedirectUriRef = ref<string>(normalizeRedirectUri(import.meta.env.VITE_TWITCH_REDIRECT_URI));
+
+
 const existingSession = loadAdminSession();
 const token = ref<string | null>(existingSession?.token ?? null);
 const profile = ref<AdminProfile | null>(existingSession?.profile ?? null);
@@ -250,7 +268,8 @@ const loginWithTwitch = () => {
   }
 
 
-  const redirectUri = twitchRedirectUri.value;
+  const redirectUri = twitchRedirectUriRef.value;
+
   const authorizeUrl = new URL('https://id.twitch.tv/oauth2/authorize');
   authorizeUrl.searchParams.set('client_id', twitchClientId.value);
   authorizeUrl.searchParams.set('redirect_uri', redirectUri);
@@ -274,7 +293,8 @@ const fetchAuthConfig = async () => {
   }
 
   if (data.twitch_redirect_uri) {
-    twitchRedirectUri.value = normalizeRedirectUri(data.twitch_redirect_uri);
+
+    twitchRedirectUriRef.value = normalizeRedirectUri(data.twitch_redirect_uri);
 
   }
 };
