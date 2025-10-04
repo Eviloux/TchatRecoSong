@@ -10,7 +10,12 @@
     <div v-if="!token" class="login-options">
       <p>Connectez-vous avec un compte autorisé pour gérer les recommandations.</p>
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
-      <button type="button" class="twitch-login" @click="loginWithTwitch">
+      <button
+        v-if="twitchClientId"
+        type="button"
+        class="twitch-login"
+        @click="loginWithTwitch"
+      >
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false" role="img">
             <path
@@ -39,14 +44,14 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-
-import { useRoute, useRouter } from 'vue-router';
-
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
-
 import { getApiUrl } from '../utils/api';
 
+interface AdminProfile {
+  name: string;
+  provider: string;
+}
 
 type SongListHandle = {
   refresh: () => Promise<void> | void;
@@ -58,61 +63,29 @@ declare global {
   }
 }
 
-
-interface AdminProfile {
-  name: string;
-  provider: string;
-}
-
 const API_URL = getApiUrl();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 
-const token = ref<string | null>(typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null);
-const storedProfile = typeof window !== 'undefined' ? localStorage.getItem('admin_profile') : null;
-let parsedProfile: AdminProfile | null = null;
-
-if (storedProfile) {
-  try {
-    const candidate = JSON.parse(storedProfile) as AdminProfile;
-    if (candidate && typeof candidate.name === 'string' && typeof candidate.provider === 'string') {
-      parsedProfile = candidate;
-    }
-  } catch (err) {
-    console.warn('Profil admin invalide, réinitialisation.', err);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin_profile');
-    }
-  }
-}
-
-const profile = ref<AdminProfile | null>(parsedProfile);
-
+const token = ref<string | null>(localStorage.getItem('admin_token'));
+const storedProfile = localStorage.getItem('admin_profile');
+const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
-let googleInitTimer: number | null = null;
-
 const storeSession = (authToken: string, provider: string, name: string) => {
-
   token.value = authToken;
   profile.value = { name, provider };
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('admin_token', authToken);
-    localStorage.setItem('admin_profile', JSON.stringify(profile.value));
-  }
-
+  localStorage.setItem('admin_token', authToken);
+  localStorage.setItem('admin_profile', JSON.stringify(profile.value));
 };
 
 const logout = () => {
   token.value = null;
   profile.value = null;
-
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_profile');
-  }
-
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_profile');
 };
 
 const handleBanRuleCreated = async () => {
@@ -121,20 +94,27 @@ const handleBanRuleCreated = async () => {
   }
 };
 
-
-const callAuthEndpoint = async (endpoint: 'google', payload: Record<string, string>) => {
+const callAuthEndpoint = async (endpoint: 'google' | 'twitch', payload: Record<string, string>) => {
   if (!API_URL) {
     error.value = 'API non configurée.';
     return;
   }
-
   try {
     error.value = '';
-    const data = await exchangeAdminAuth(endpoint, payload);
+    const response = await fetch(`${API_URL}/auth/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({ detail: 'Erreur inconnue' }));
+      throw new Error(data.detail);
+    }
+    const data = await response.json();
     storeSession(data.token, data.provider, data.name);
   } catch (err: any) {
     console.error(err);
-    error.value = err?.message || 'Connexion impossible.';
+    error.value = err.message || 'Connexion impossible.';
   }
 };
 
@@ -142,6 +122,8 @@ const handleGoogleCredential = async (response: any) => {
   error.value = '';
   await callAuthEndpoint('google', { credential: response.credential });
 };
+
+let googleInitTimer: number | null = null;
 
 const ensureGoogleButton = async () => {
   if (!googleClientId.value || !window.google?.accounts?.id) {
@@ -171,7 +153,6 @@ const scheduleGoogleInitRetry = () => {
   if (googleInitTimer !== null) {
     return;
   }
-
   googleInitTimer = window.setInterval(() => {
     if (window.google?.accounts?.id) {
       ensureGoogleButton();
@@ -183,51 +164,45 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
-
 const loginWithTwitch = () => {
-  error.value = 'La connexion Twitch sera bientôt disponible.';
-
+  error.value = '';
+  if (!twitchClientId.value) {
+    error.value = 'TWITCH_CLIENT_ID manquant.';
+    return;
+  }
+  const redirectUri = `${window.location.origin}/admin`;
+  const url = new URL('https://id.twitch.tv/oauth2/authorize');
+  url.searchParams.set('client_id', twitchClientId.value);
+  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('response_type', 'token');
+  url.searchParams.set('scope', 'user:read:email');
+  window.location.href = url.toString();
 };
 
-const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
-  if (twitchFragmentProcessing) {
-    return false;
+const checkTwitchRedirect = async () => {
+  if (!window.location.hash) return;
+  const params = new URLSearchParams(window.location.hash.replace('#', ''));
+  const accessToken = params.get('access_token');
+  if (accessToken) {
+    await callAuthEndpoint('twitch', { access_token: accessToken });
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
+};
 
-  const rawHash = typeof hash === 'string' && hash.length > 0 ? hash : window.location.hash;
-  if (!rawHash) {
-    return false;
-  }
-
-  const trimmed = rawHash.startsWith('#') ? rawHash.slice(1) : rawHash;
-  if (!trimmed) {
-    return false;
-  }
-
-  const params = new URLSearchParams(trimmed);
-  const hasRelevantParams =
-    params.has('access_token') || params.has('error') || params.has('error_description');
-
-  if (!hasRelevantParams) {
-    return false;
-  }
-
-  twitchFragmentProcessing = true;
-  cleanupTwitchFragment();
-
+const fetchAuthConfig = async () => {
+  if (!API_URL) return;
   try {
-    const errorParam = params.get('error');
-    const errorDescription = params.get('error_description');
-    const accessToken = params.get('access_token');
-
-    if (errorParam) {
-      error.value = errorDescription || errorParam;
-      return true;
+    const response = await fetch(`${API_URL}/auth/config`);
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.google_client_id) {
+      googleClientId.value = data.google_client_id;
     }
-
+    if (data.twitch_client_id) {
+      twitchClientId.value = data.twitch_client_id;
+    }
   } catch (err) {
     console.error('Impossible de récupérer la configuration auth', err);
-
   }
 };
 
@@ -236,33 +211,19 @@ watch(googleClientId, () => {
   scheduleGoogleInitRetry();
 });
 
-watch(
-  () => token.value,
-  async (newToken) => {
-    if (newToken === null) {
-      await nextTick();
-      ensureGoogleButton();
-      scheduleGoogleInitRetry();
-    }
-
-  },
-
-);
+watch(token, async (newToken) => {
+  if (newToken === null) {
+    await nextTick();
+    ensureGoogleButton();
+    scheduleGoogleInitRetry();
+  }
+});
 
 onMounted(async () => {
-  const twitchHandled = await handleTwitchFragment(route.hash);
-
-
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
+  await checkTwitchRedirect();
   ensureGoogleButton();
-
-  if (twitchHandled && token.value) {
-    // refresh the admin list when a Twitch login has just been processed
-    if (songListRef.value) {
-      void songListRef.value.refresh();
-    }
-  }
 });
 
 onBeforeUnmount(() => {
@@ -272,4 +233,3 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
