@@ -9,6 +9,9 @@ from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
 from app.utils.text import normalize
 
 
+_UNKNOWN_ARTIST_NORMALIZED = normalize("Artiste inconnu")
+
+
 def _matches_rule(song: Song, rule: BanRule) -> bool:
     matches_title = True
     if rule.title:
@@ -16,7 +19,13 @@ def _matches_rule(song: Song, rule: BanRule) -> bool:
 
     matches_artist = True
     if rule.artist:
-        matches_artist = normalize(song.artist) == normalize(rule.artist)
+        song_artist_norm = normalize(song.artist)
+        rule_artist_norm = normalize(rule.artist)
+
+        if not song_artist_norm or song_artist_norm == _UNKNOWN_ARTIST_NORMALIZED:
+            matches_artist = True
+        else:
+            matches_artist = song_artist_norm == rule_artist_norm
 
     return matches_title and matches_artist
 

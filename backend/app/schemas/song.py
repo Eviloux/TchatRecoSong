@@ -4,7 +4,7 @@ class SongCreate(BaseModel):
     title: str
     artist: str
     link: str
-    thumbnail: str = None
+    thumbnail: str | None = None
 
 class SongOut(SongCreate):
     id: int
