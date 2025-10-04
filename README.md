@@ -91,6 +91,7 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 - Portail public (viewers) : `https://tchatrecosong-front.onrender.com/submit`
 - Page de connexion administrateur : `https://tchatrecosong-front.onrender.com/admin`
 - Tableau de bord administrateur (après authentification) : `https://tchatrecosong-front.onrender.com/admin`
+- Callback OAuth Twitch : `https://tchatrecosong-front.onrender.com/twitch-callback`
 
 > ℹ️ Le tableau de bord admin demande une authentification Google ou Twitch. Assure-toi
 > que l'adresse ou le login de chaque membre de l'équipe figure bien dans
@@ -113,8 +114,11 @@ doivent rester secrètes et spécifiques à ton compte. Voici comment les créer
 
 2. **Identifiants Twitch (`TWITCH_CLIENT_ID` / `VITE_TWITCH_CLIENT_ID`)**
    - Va sur [dev.twitch.tv/console](https://dev.twitch.tv/console/apps).
-   - Crée une application, choisis "Web" comme type et renseigne l'URL de redirection `https://tchatrecosong-front.onrender.com/admin` (et `http://localhost:5173/admin` pour le local).
+   - Crée une application, choisis "Web" comme type et renseigne comme URL de redirection principale `https://tchatrecosong-front.onrender.com/twitch-callback` (et `http://localhost:5173/twitch-callback` pour les tests locaux).
+   - Si ton application Twitch existante pointe encore vers `/admin`, ajoute simplement la nouvelle URL de redirection (ou garde les deux) pour que le flux popup puisse revenir sur `/twitch-callback` sans casser les connexions existantes.
    - Une fois l'appli créée, récupère le `Client ID` (renseigne-le côté backend et frontend) et garde le `Client Secret` dans la console Twitch : il n'est pas nécessaire dans la configuration actuelle qui se contente de valider des tokens d'accès existants.
+
+> ℹ️ Le callback `/twitch-callback` publie le résultat d'authentification à la fenêtre parente. Si cette communication échoue (navigateur verrouillé, bloqueur, etc.), un repli "legacy-hash" se déclenche : le token est stocké dans `localStorage` puis la page `/admin` est rechargée, ce qui permet à l'interface d'administration de récupérer la réponse. Pendant la migration, tu peux donc garder l'ancien `/admin` déclaré sur Twitch, mais assure-toi d'ajouter `/twitch-callback` pour bénéficier du nouveau flux pop-up.
 
 3. **APIs YouTube & Spotify**
    - Le projet s'appuie sur les endpoints publics oEmbed de YouTube et Spotify, qui ne nécessitent ni clé API ni jeton d'accès supplémentaires.
