@@ -44,13 +44,9 @@ import { useRoute, useRouter } from 'vue-router';
 
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
-import { exchangeAdminAuth, fetchAuthConfigFromApi } from '../services/adminAuth';
-import {
-  AdminProfile,
-  clearAdminSession,
-  loadAdminSession,
-  saveAdminSession,
-} from '../utils/adminSession';
+
+import { getApiUrl } from '../utils/api';
+
 
 type SongListHandle = {
   refresh: () => Promise<void> | void;
@@ -63,27 +59,60 @@ declare global {
 }
 
 
+interface AdminProfile {
+  name: string;
+  provider: string;
+}
+
+const API_URL = getApiUrl();
+
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 
+const token = ref<string | null>(typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null);
+const storedProfile = typeof window !== 'undefined' ? localStorage.getItem('admin_profile') : null;
+let parsedProfile: AdminProfile | null = null;
 
-const existingSession = loadAdminSession();
-const token = ref<string | null>(existingSession?.token ?? null);
-const profile = ref<AdminProfile | null>(existingSession?.profile ?? null);
+if (storedProfile) {
+  try {
+    const candidate = JSON.parse(storedProfile) as AdminProfile;
+    if (candidate && typeof candidate.name === 'string' && typeof candidate.provider === 'string') {
+      parsedProfile = candidate;
+    }
+  } catch (err) {
+    console.warn('Profil admin invalide, réinitialisation.', err);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_profile');
+    }
+  }
+}
+
+const profile = ref<AdminProfile | null>(parsedProfile);
+
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 
 let googleInitTimer: number | null = null;
 
 const storeSession = (authToken: string, provider: string, name: string) => {
-  const session = saveAdminSession(authToken, provider, name);
-  token.value = session.token;
-  profile.value = session.profile;
+
+  token.value = authToken;
+  profile.value = { name, provider };
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('admin_token', authToken);
+    localStorage.setItem('admin_profile', JSON.stringify(profile.value));
+  }
+
 };
 
 const logout = () => {
   token.value = null;
   profile.value = null;
-  clearAdminSession();
+
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_profile');
+  }
+
 };
 
 const handleBanRuleCreated = async () => {
@@ -94,6 +123,10 @@ const handleBanRuleCreated = async () => {
 
 
 const callAuthEndpoint = async (endpoint: 'google', payload: Record<string, string>) => {
+  if (!API_URL) {
+    error.value = 'API non configurée.';
+    return;
+  }
 
   try {
     error.value = '';
@@ -150,19 +183,10 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
-const normalizeAdminUrl = () => {
-  const resolved = router.resolve({ name: 'admin' });
-  return new URL(resolved.href, window.location.origin).toString();
-};
 
-const cleanupTwitchFragment = () => {
-  const absoluteAdmin = normalizeAdminUrl();
-  window.history.replaceState({}, document.title, absoluteAdmin);
-  if (route.name !== 'admin' || route.hash) {
-    router.replace({ name: 'admin', hash: undefined }).catch(() => {
-      // Ignorer les échecs de navigation redondants
-    });
-  }
+const loginWithTwitch = () => {
+  error.value = 'La connexion Twitch sera bientôt disponible.';
+
 };
 
 const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
@@ -201,30 +225,8 @@ const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
       return true;
     }
 
-    if (!accessToken) {
-      return true;
-    }
-
-    await callAuthEndpoint('twitch', { access_token: accessToken });
-    return true;
-  } finally {
-    twitchFragmentProcessing = false;
-  }
-};
-
-const loginWithTwitch = () => {
-
-  error.value = "La connexion Twitch sera bientôt disponible.";
-};
-
-const fetchAuthConfig = async () => {
-  const data = await fetchAuthConfigFromApi();
-  if (!data) {
-    return;
-  }
-
-  if (data.google_client_id) {
-    googleClientId.value = data.google_client_id;
+  } catch (err) {
+    console.error('Impossible de récupérer la configuration auth', err);
 
   }
 };
