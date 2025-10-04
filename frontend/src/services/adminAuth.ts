@@ -1,6 +1,8 @@
 import { getApiUrl } from '../utils/api';
 
+
 type AuthEndpoint = 'google';
+
 
 export interface AuthResponse {
   token: string;
@@ -10,6 +12,7 @@ export interface AuthResponse {
 
 export interface AuthConfig {
   google_client_id?: string;
+
 }
 
 export async function exchangeAdminAuth(endpoint: AuthEndpoint, payload: Record<string, string>): Promise<AuthResponse> {

@@ -39,6 +39,9 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+import { useRoute, useRouter } from 'vue-router';
+
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
 import { exchangeAdminAuth, fetchAuthConfigFromApi } from '../services/adminAuth';
@@ -59,7 +62,9 @@ declare global {
   }
 }
 
+
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+
 
 const existingSession = loadAdminSession();
 const token = ref<string | null>(existingSession?.token ?? null);
@@ -87,7 +92,9 @@ const handleBanRuleCreated = async () => {
   }
 };
 
+
 const callAuthEndpoint = async (endpoint: 'google', payload: Record<string, string>) => {
+
   try {
     error.value = '';
     const data = await exchangeAdminAuth(endpoint, payload);
@@ -143,7 +150,70 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
+const normalizeAdminUrl = () => {
+  const resolved = router.resolve({ name: 'admin' });
+  return new URL(resolved.href, window.location.origin).toString();
+};
+
+const cleanupTwitchFragment = () => {
+  const absoluteAdmin = normalizeAdminUrl();
+  window.history.replaceState({}, document.title, absoluteAdmin);
+  if (route.name !== 'admin' || route.hash) {
+    router.replace({ name: 'admin', hash: undefined }).catch(() => {
+      // Ignorer les échecs de navigation redondants
+    });
+  }
+};
+
+const handleTwitchFragment = async (hash?: string | null): Promise<boolean> => {
+  if (twitchFragmentProcessing) {
+    return false;
+  }
+
+  const rawHash = typeof hash === 'string' && hash.length > 0 ? hash : window.location.hash;
+  if (!rawHash) {
+    return false;
+  }
+
+  const trimmed = rawHash.startsWith('#') ? rawHash.slice(1) : rawHash;
+  if (!trimmed) {
+    return false;
+  }
+
+  const params = new URLSearchParams(trimmed);
+  const hasRelevantParams =
+    params.has('access_token') || params.has('error') || params.has('error_description');
+
+  if (!hasRelevantParams) {
+    return false;
+  }
+
+  twitchFragmentProcessing = true;
+  cleanupTwitchFragment();
+
+  try {
+    const errorParam = params.get('error');
+    const errorDescription = params.get('error_description');
+    const accessToken = params.get('access_token');
+
+    if (errorParam) {
+      error.value = errorDescription || errorParam;
+      return true;
+    }
+
+    if (!accessToken) {
+      return true;
+    }
+
+    await callAuthEndpoint('twitch', { access_token: accessToken });
+    return true;
+  } finally {
+    twitchFragmentProcessing = false;
+  }
+};
+
 const loginWithTwitch = () => {
+
   error.value = "La connexion Twitch sera bientôt disponible.";
 };
 
@@ -155,6 +225,7 @@ const fetchAuthConfig = async () => {
 
   if (data.google_client_id) {
     googleClientId.value = data.google_client_id;
+
   }
 };
 
@@ -171,13 +242,25 @@ watch(
       ensureGoogleButton();
       scheduleGoogleInitRetry();
     }
+
   },
+
 );
 
 onMounted(async () => {
+  const twitchHandled = await handleTwitchFragment(route.hash);
+
+
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
   ensureGoogleButton();
+
+  if (twitchHandled && token.value) {
+    // refresh the admin list when a Twitch login has just been processed
+    if (songListRef.value) {
+      void songListRef.value.refresh();
+    }
+  }
 });
 
 onBeforeUnmount(() => {
