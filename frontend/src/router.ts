@@ -8,6 +8,7 @@ const router = createRouter({
     { path: '/', redirect: '/submit' },
     { path: '/submit', name: 'submit', component: HomeView },
     { path: '/admin', name: 'admin', component: AdminView },
+    { path: '/oauth/twitch', name: 'twitchCallback', component: AdminView },
   ],
 });
 
