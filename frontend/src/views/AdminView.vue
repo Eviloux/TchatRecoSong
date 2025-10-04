@@ -192,7 +192,10 @@ const handleTwitchRedirect = async (): Promise<boolean> => {
   }
 
   const adminHref = router.resolve({ name: 'admin' }).href;
-  window.history.replaceState({}, document.title, adminHref);
+
+  const targetUrl = adminHref.startsWith('http') ? adminHref : `${window.location.origin}${adminHref}`;
+  window.history.replaceState({}, document.title, targetUrl);
+
 
   if (errorParam) {
     error.value = errorDescription || errorParam;
