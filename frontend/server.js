@@ -65,41 +65,28 @@ const server = createServer(async (req, res) => {
     res.end();
     return;
   }
-  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
-
-    sendFile(req, res, indexPath);
-    return;
-  }
-
-  if (decodedPath === '/admin' || decodedPath.startsWith('/admin/')) {
-    sendFile(req, res, indexPath);
-    return;
-  }
-
 
   const normalized = decodedPath.replace(/^\/+/, '');
   const hasExtension = extname(normalized) !== '';
-  const candidate = join(distDir, normalized || 'index.html');
-  const fileExists = existsSync(candidate) && lstatSync(candidate).isFile();
-  const acceptsHtml = (req.headers.accept ?? '').includes('text/html');
+  const candidate = join(distDir, normalized);
 
   try {
-    if (hasExtension && fileExists) {
+    const fileExists = hasExtension && existsSync(candidate) && lstatSync(candidate).isFile();
+
+    if (fileExists) {
       sendFile(req, res, candidate);
       return;
     }
 
-    if (!hasExtension || acceptsHtml) {
+    if (!hasExtension) {
       sendFile(req, res, indexPath);
       return;
     }
 
-    if (hasExtension) {
-      setCommonHeaders(res);
-      res.statusCode = 404;
-      res.end('Not Found');
-      return;
-    }
+    setCommonHeaders(res);
+    res.statusCode = 404;
+    res.end('Not Found');
+    return;
   } catch (err) {
     res.statusCode = 500;
     setCommonHeaders(res);
