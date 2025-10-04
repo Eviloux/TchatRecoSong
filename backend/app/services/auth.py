@@ -20,9 +20,7 @@ from app.config import (
     ADMIN_JWT_SECRET,
     ADMIN_TOKEN_TTL_MINUTES,
     ALLOWED_GOOGLE_EMAILS,
-    ALLOWED_TWITCH_LOGINS,
     GOOGLE_CLIENT_ID,
-    TWITCH_CLIENT_ID,
 )
 
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
@@ -232,62 +230,3 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     return token, name
 
 
-def authenticate_twitch(access_token: str) -> tuple[str, str]:
-    if not TWITCH_CLIENT_ID:
-        raise AdminAuthError("TWITCH_CLIENT_ID non configuré")
-
-    headers = {"Authorization": f"OAuth {access_token}", "Client-Id": TWITCH_CLIENT_ID}
-
-    with httpx.Client(timeout=5.0) as client:
-        try:
-            logger.info("Tentative d'authentification Twitch (OAuth header)")
-            response = client.get("https://id.twitch.tv/oauth2/validate", headers=headers)
-            if response.status_code == 401:
-                # Certains SDK fournissent des tokens à valider via l'entête Bearer
-                headers["Authorization"] = f"Bearer {access_token}"
-                logger.info(
-                    "Réessai de validation Twitch avec l'entête Bearer (statut=%s)",
-                    response.status_code,
-                )
-                response = client.get("https://id.twitch.tv/oauth2/validate", headers=headers)
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:  # pragma: no cover - dépend du service externe
-            logger.warning(
-                "Réponse HTTP inattendue de Twitch (statut=%s, corps=%s)",
-                exc.response.status_code,
-                exc.response.text[:200],
-            )
-            raise AdminAuthError("Token Twitch invalide") from exc
-        except httpx.HTTPError as exc:  # pragma: no cover - dépend du réseau
-            logger.exception("Erreur réseau lors de la validation Twitch")
-            raise AdminAuthError("Impossible de contacter Twitch") from exc
-
-    data = response.json()
-    login = data.get("login")
-    client_id = data.get("client_id")
-
-    logger.info(
-        "Token Twitch validé (login=%s, client_id=%s, scopes=%s, expires_in=%s)",
-        login,
-        client_id,
-        data.get("scopes"),
-        data.get("expires_in"),
-    )
-
-    if client_id != TWITCH_CLIENT_ID:
-        logger.warning(
-            "Client Twitch inattendu (attendu=%s, reçu=%s)",
-            TWITCH_CLIENT_ID,
-            client_id,
-        )
-        raise AdminAuthError("Client Twitch non autorisé")
-
-    if ALLOWED_TWITCH_LOGINS and login not in ALLOWED_TWITCH_LOGINS:
-        logger.warning("Compte Twitch non autorisé (login=%s)", login)
-        raise AdminAuthError("Compte Twitch non autorisé", status.HTTP_403_FORBIDDEN)
-
-    subject = f"twitch:{data.get('user_id')}"
-    name = login or subject
-    token = issue_admin_token(subject=subject, name=name, provider="twitch")
-    logger.info("Authentification Twitch réussie (subject=%s, name=%s)", subject, name)
-    return token, name

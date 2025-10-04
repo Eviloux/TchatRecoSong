@@ -19,7 +19,7 @@ hébergée par ce dépôt (ex. `https://tchatrecosong-front.onrender.com/submit`
 leur lien YouTube ou Spotify ; le backend va chercher les métadonnées
 correspondantes via `POST /public/submissions/` et enregistre la recommandation
 en base. Les écrans d'administration (liste des chansons, règles de
-bannissement) restent réservés aux comptes Google/Twitch autorisés.
+bannissement) restent réservés aux comptes Google autorisés.
 
 ## Base de données Neon / Render
 
@@ -73,12 +73,9 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 | `ADMIN_JWT_SECRET` | Une chaîne secrète longue et aléatoire pour signer les JWT admin. |
 | `ADMIN_TOKEN_TTL_MINUTES` | Durée de validité des tokens admin (720 = 12 h). |
 | `GOOGLE_CLIENT_ID` | L'identifiant OAuth Google obtenu dans Google Cloud Console. |
-| `TWITCH_CLIENT_ID` | L'identifiant OAuth Twitch associé à votre application. |
 | `ALLOWED_GOOGLE_EMAILS` | Les emails Google autorisés à accéder à l'administration. |
-| `ALLOWED_TWITCH_LOGINS` | Les logins Twitch autorisés à accéder à l'administration. |
 | `VITE_API_URL` | L'URL publique du backend (ex : `https://tchat-reco-backend.onrender.com`). |
 | `VITE_GOOGLE_CLIENT_ID` | Identique à `GOOGLE_CLIENT_ID` pour initialiser le bouton côté front. |
-| `VITE_TWITCH_CLIENT_ID` | Identique à `TWITCH_CLIENT_ID` pour l'auth Twitch côté front. |
 | `VITE_PUBLIC_VIEWER_URL` | L'URL à afficher dans le tchat Twitch (page publique de soumission, ex. `/submit`). |
 
 > ⚠️ Les valeurs présentes dans les fichiers `.env` versionnés sont **des exemples**. Sur Render,
@@ -91,13 +88,11 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 - Portail public (viewers) : `https://tchatrecosong-front.onrender.com/submit`
 - Page de connexion administrateur : `https://tchatrecosong-front.onrender.com/admin`
 - Tableau de bord administrateur (après authentification) : `https://tchatrecosong-front.onrender.com/admin`
-- Callback OAuth Twitch : `https://tchatrecosong-front.onrender.com/twitch-callback`
+> ℹ️ Le tableau de bord admin demande une authentification Google. Assure-toi
+> que l'adresse de chaque membre de l'équipe figure bien dans
+> `ALLOWED_GOOGLE_EMAILS`.
 
-> ℹ️ Le tableau de bord admin demande une authentification Google ou Twitch. Assure-toi
-> que l'adresse ou le login de chaque membre de l'équipe figure bien dans
-> `ALLOWED_GOOGLE_EMAILS` ou `ALLOWED_TWITCH_LOGINS`.
-
-> 💡 Les jetons générés par `POST /auth/google` et `POST /auth/twitch` sont valables
+> 💡 Les jetons générés par `POST /auth/google` sont valables
 > `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut). Ajustez cette valeur si besoin.
 
 ### Générer les identifiants et secrets OAuth
@@ -112,14 +107,6 @@ doivent rester secrètes et spécifiques à ton compte. Voici comment les créer
    - Ajoute comme origines autorisées l'URL de ton frontend (Render) et `http://localhost:5173` pour les tests.
    - Copie l'ID client (pas besoin de secret côté frontend) et reporte-le dans `.env`.
 
-2. **Identifiants Twitch (`TWITCH_CLIENT_ID` / `VITE_TWITCH_CLIENT_ID`)**
-   - Va sur [dev.twitch.tv/console](https://dev.twitch.tv/console/apps).
-   - Crée une application, choisis "Web" comme type et renseigne comme URL de redirection principale `https://tchatrecosong-front.onrender.com/twitch-callback` (et `http://localhost:5173/twitch-callback` pour les tests locaux).
-   - Si ton application Twitch existante pointe encore vers `/admin`, ajoute simplement la nouvelle URL de redirection (ou garde les deux) pour que le flux popup puisse revenir sur `/twitch-callback` sans casser les connexions existantes.
-   - Une fois l'appli créée, récupère le `Client ID` (renseigne-le côté backend et frontend) et garde le `Client Secret` dans la console Twitch : il n'est pas nécessaire dans la configuration actuelle qui se contente de valider des tokens d'accès existants.
-
-> ℹ️ Le callback `/twitch-callback` publie le résultat d'authentification à la fenêtre parente. Si cette communication échoue (navigateur verrouillé, bloqueur, etc.), un repli "legacy-hash" se déclenche : le token est stocké dans `localStorage` puis la page `/admin` est rechargée, ce qui permet à l'interface d'administration de récupérer la réponse. Pendant la migration, tu peux donc garder l'ancien `/admin` déclaré sur Twitch, mais assure-toi d'ajouter `/twitch-callback` pour bénéficier du nouveau flux pop-up.
-
-3. **APIs YouTube & Spotify**
+2. **APIs YouTube & Spotify**
    - Le projet s'appuie sur les endpoints publics oEmbed de YouTube et Spotify, qui ne nécessitent ni clé API ni jeton d'accès supplémentaires.
    - Aucun champ `.env` n'est donc à renseigner pour ces services. Si tu souhaites étendre les fonctionnalités (ex : recherche), crée des clés via la Google Cloud Console ou le Dashboard Spotify Developer et ajuste le code en conséquence.
