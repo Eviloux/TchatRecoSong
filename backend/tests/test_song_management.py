@@ -231,3 +231,14 @@ def test_ban_rule_blocks_future_matches(session: Session) -> None:
 
     assert result is None
     assert session.query(Song).count() == 0
+
+
+def test_is_banned_handles_unknown_artist_placeholder(session: Session) -> None:
+    ban_crud.add_ban_rule(
+        session,
+        BanRuleCreate(title="Mystery Song", artist="Some Artist"),
+    )
+
+    assert (
+        ban_crud.is_banned(session, "Mystery Song", "Artiste inconnu", "") is True
+    )
