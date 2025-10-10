@@ -65,6 +65,35 @@ def test_add_ban_rule_removes_matching_songs(session: Session) -> None:
     assert "https://youtube.com/watch?v=autre" in remaining
 
 
+def test_add_ban_rule_with_partial_title_removes_song(session: Session) -> None:
+    song_crud.add_or_increment_song(
+        session,
+        SongCreate(
+            title="Billie Eilish - No Time To Die (Official Music Video)",
+            artist="Billie Eilish",
+            link="https://youtube.com/watch?v=notimetodie",
+        ),
+    )
+
+    song_crud.add_or_increment_song(
+        session,
+        SongCreate(
+            title="Another track",
+            artist="Another Artist",
+            link="https://youtube.com/watch?v=another",
+        ),
+    )
+
+    ban_crud.add_ban_rule(
+        session,
+        BanRuleCreate(title="No Time To Die", artist=None, link=None),
+    )
+
+    remaining_links = {song.link for song in session.query(Song).all()}
+    assert "https://youtube.com/watch?v=notimetodie" not in remaining_links
+    assert "https://youtube.com/watch?v=another" in remaining_links
+
+
 def test_add_ban_rule_handles_unknown_artist_placeholder(session: Session) -> None:
     session.add(
         Song(
@@ -242,3 +271,22 @@ def test_is_banned_handles_unknown_artist_placeholder(session: Session) -> None:
     assert (
         ban_crud.is_banned(session, "Mystery Song", "Artiste inconnu", "") is True
     )
+
+
+
+def test_is_banned_matches_partial_title(session: Session) -> None:
+    ban_crud.add_ban_rule(
+        session,
+        BanRuleCreate(title="No Time To Die", artist=None, link=None),
+    )
+
+    assert (
+        ban_crud.is_banned(
+            session,
+            "Billie Eilish - No Time To Die (Official Music Video)",
+            "Billie Eilish",
+            "",
+        )
+        is True
+    )
+

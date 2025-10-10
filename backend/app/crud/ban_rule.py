@@ -12,10 +12,21 @@ from app.utils.text import normalize
 _UNKNOWN_ARTIST_NORMALIZED = normalize("Artiste inconnu")
 
 
+def _normalized_overlap(value_a: str, value_b: str) -> bool:
+    if not value_a or not value_b:
+        return False
+    return value_a in value_b or value_b in value_a
+
+
 def _matches_rule_values(title: str | None, artist: str | None, rule: BanRule) -> bool:
     matches_title = True
     if rule.title:
-        matches_title = normalize(title or "") == normalize(rule.title)
+        song_title_norm = normalize(title or "")
+        rule_title_norm = normalize(rule.title)
+        matches_title = bool(rule_title_norm) and bool(song_title_norm) and _normalized_overlap(
+            rule_title_norm, song_title_norm
+        )
+
 
     matches_artist = True
     if rule.artist:
@@ -25,7 +36,7 @@ def _matches_rule_values(title: str | None, artist: str | None, rule: BanRule) -
         if not song_artist_norm or song_artist_norm == _UNKNOWN_ARTIST_NORMALIZED:
             matches_artist = True
         else:
-            matches_artist = song_artist_norm == rule_artist_norm
+            matches_artist = _normalized_overlap(rule_artist_norm, song_artist_norm)
 
     return matches_title and matches_artist
 

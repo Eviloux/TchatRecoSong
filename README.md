@@ -95,6 +95,24 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 > 💡 Les jetons générés par `POST /auth/google` sont valables
 > `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut). Ajustez cette valeur si besoin.
 
+### Pourquoi `/submit` affiche "404 Not Found" après un rafraîchissement ?
+
+L'URL `/submit` est définie côté frontend par le routeur Vue (`createWebHistory`).
+Tant que la navigation se fait via les liens internes, c'est le navigateur qui gère
+la transition vers la page de soumission. En revanche, lorsqu'on actualise
+directement `https://…/submit`, la requête HTTP est renvoyée telle quelle au
+serveur. Si c'est le backend FastAPI qui reçoit cette requête, il répond 404
+car il n'expose qu'une racine `/` (voir `backend/app/main.py`) : aucune route
+`/submit` n'existe côté API. Il faut donc s'assurer que le service frontend —
+celui qui sert les fichiers Vite compilés via `frontend/server.js` — reçoit les
+requêtes `/submit` et renvoie `index.html` en fallback. Concrètement :
+
+1. Vérifie que tes DNS / ton reverse-proxy pointent bien `tchatrecosong-front…`
+   vers le service Node qui exécute `npm run start`.
+2. Déploie la dernière version du frontend : le serveur Node intégré redirige `/`
+   vers `/submit` et renvoie systématiquement `index.html` pour les URL sans
+   extension, ce qui évite les 404 au rafraîchissement.
+
 ### Générer les identifiants et secrets OAuth
 
 Impossible de te fournir des jetons ou des clients OAuth déjà valides — ces valeurs
