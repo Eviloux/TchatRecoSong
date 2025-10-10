@@ -19,11 +19,13 @@ class BanRuleBase(BaseModel):
         return value
 
 
-    @model_validator(mode="after")
-    def _ensure_any_field(cls, values: "BanRuleBase") -> "BanRuleBase":
-        if not (values.title or values.artist or values.link):
-            raise ValueError("Au moins un champ doit être renseigné")
-        return values
+    @model_validator(mode="before")
+    @classmethod
+    def _ensure_any_field(cls, data):
+        if isinstance(data, dict):
+            if not any(data.get(field) for field in ("title", "artist", "link")):
+                raise ValueError("Au moins un champ doit être renseigné")
+        return data
 
 
 class BanRuleCreate(BanRuleBase):

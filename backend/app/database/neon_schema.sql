@@ -25,3 +25,15 @@ CREATE INDEX IF NOT EXISTS idx_ban_rules_title ON ban_rules (title);
 CREATE INDEX IF NOT EXISTS idx_ban_rules_artist ON ban_rules (artist);
 CREATE INDEX IF NOT EXISTS idx_ban_rules_link ON ban_rules (link);
 
+CREATE TABLE IF NOT EXISTS admin_users (
+    id SERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users (email);
+

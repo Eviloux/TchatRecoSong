@@ -95,6 +95,33 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 > 💡 Les jetons générés par `POST /auth/google` sont valables
 > `ADMIN_TOKEN_TTL_MINUTES` minutes (12 h par défaut). Ajustez cette valeur si besoin.
 
+### Pourquoi `/submit` affiche "404 Not Found" après un rafraîchissement ?
+
+Historiquement, le backend FastAPI n'exposait qu'une route `/`. Rafraîchir la
+page `https://…/submit` envoyait donc la requête directement au backend et se
+traduisait par un 404.
+
+Depuis la mise à jour du backend, la route `/submit` renvoie automatiquement le
+fichier `index.html` du build Vite si celui-ci est présent sur le serveur. Deux
+conditions doivent toutefois être réunies :
+
+1. **Le build frontend doit être disponible localement.** Par défaut, le backend
+   cherche `frontend/dist/index.html`. Si ton pipeline de déploiement génère le
+   build ailleurs, définis `FRONTEND_DIST_PATH` (et éventuellement
+   `FRONTEND_INDEX_PATH`) pour pointer vers le dossier adéquat.
+2. **Les assets du dossier `dist/assets` doivent être copiés avec le build.**
+   Lorsque le dossier existe, le backend les expose automatiquement sous
+   `https://…/assets/...`.
+
+Si le fichier `index.html` n'est pas trouvé, la route `/submit` renvoie un code
+503 explicite. Dans ce cas, vérifie que le build frontend est bien déployé à
+côté de l'API ou mets à jour les variables d'environnement ci-dessus.
+
+> 🌐 Tu déploies le frontend sur un service séparé (ex. Render) ? Renseigne
+> `FRONTEND_SUBMIT_REDIRECT_URL` (ex. `https://tchatrecosong-front.onrender.com/submit`).
+> Si le build local est absent, le backend redirigera automatiquement `/submit`
+> vers cette URL pour éviter l'erreur 404 lors d'un rafraîchissement.
+
 ### Générer les identifiants et secrets OAuth
 
 Impossible de te fournir des jetons ou des clients OAuth déjà valides — ces valeurs

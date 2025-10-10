@@ -120,6 +120,54 @@ body {
     gap: $spacing-medium;
     justify-items: center;
 
+    .email-login {
+      width: 100%;
+      max-width: 320px;
+      display: grid;
+      gap: $spacing-small;
+      justify-items: stretch;
+
+      label {
+        font-weight: 600;
+        justify-self: flex-start;
+      }
+
+      input {
+        @include input-style;
+      }
+
+      button {
+        @include button-style;
+      }
+    }
+
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: $spacing-small;
+      width: 100%;
+      max-width: 320px;
+      color: $muted-color;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+
+      &::before,
+      &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(148, 163, 184, 0.2);
+      }
+
+      span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2rem;
+      }
+    }
+
     button {
       @include button-style;
       display: inline-flex;
