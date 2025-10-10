@@ -2,10 +2,7 @@
   <section class="home-view">
     <header class="hero">
       <h2 class="hero-title">Dépose ta reco en quelques secondes</h2>
-      <p class="hero-subtitle">
-        Tape <strong>!reco</strong> dans le tchat Twitch : le bot répondra avec ce lien public
-        <strong>{{ viewerUrl }}</strong>. Colle ensuite ton lien YouTube ou Spotify ci-dessous.
-      </p>
+      <p class="hero-subtitle">Colle ton lien YouTube ou Spotify ci-dessous.</p>
     </header>
 
     <form class="submission-form" @submit.prevent="submit" novalidate>
@@ -39,9 +36,6 @@ type SongListInstance = {
 };
 
 const API_URL = getApiUrl();
-const viewerUrl =
-  import.meta.env.VITE_PUBLIC_VIEWER_URL || `${window.location.origin}/submit`;
-
 const link = ref('');
 const feedback = ref('');
 const feedbackType = ref<'success' | 'error' | ''>('');

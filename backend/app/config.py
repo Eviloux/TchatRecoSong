@@ -122,6 +122,12 @@ else:
     FRONTEND_INDEX_PATH = FRONTEND_DIST_PATH / "index.html"
 
 
+_raw_frontend_submit_redirect = os.getenv("FRONTEND_SUBMIT_REDIRECT_URL")
+FRONTEND_SUBMIT_REDIRECT_URL = (
+    _raw_frontend_submit_redirect.strip() if _raw_frontend_submit_redirect else None
+)
+
+
 
 def log_environment_configuration() -> None:
     """Journalise les valeurs brutes et interprétées des variables d'environnement."""
@@ -176,4 +182,11 @@ def log_environment_configuration() -> None:
     logger.info("FRONTEND_DIST_PATH résolue: %s", FRONTEND_DIST_PATH)
     _log_env_value("FRONTEND_INDEX_PATH", _raw_frontend_index)
     logger.info("FRONTEND_INDEX_PATH résolue: %s", FRONTEND_INDEX_PATH)
+
+    _log_env_value("FRONTEND_SUBMIT_REDIRECT_URL", _raw_frontend_submit_redirect)
+    if FRONTEND_SUBMIT_REDIRECT_URL:
+        logger.info(
+            "FRONTEND_SUBMIT_REDIRECT_URL interprétée: %s",
+            FRONTEND_SUBMIT_REDIRECT_URL,
+        )
 

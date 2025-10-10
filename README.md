@@ -118,6 +118,10 @@ Si le fichier `index.html` n'est pas trouvé, la route `/submit` renvoie un code
 503 explicite. Dans ce cas, vérifie que le build frontend est bien déployé à
 côté de l'API ou mets à jour les variables d'environnement ci-dessus.
 
+> 🌐 Tu déploies le frontend sur un service séparé (ex. Render) ? Renseigne
+> `FRONTEND_SUBMIT_REDIRECT_URL` (ex. `https://tchatrecosong-front.onrender.com/submit`).
+> Si le build local est absent, le backend redirigera automatiquement `/submit`
+> vers cette URL pour éviter l'erreur 404 lors d'un rafraîchissement.
 
 ### Générer les identifiants et secrets OAuth
 
