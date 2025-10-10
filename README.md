@@ -97,6 +97,7 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 
 ### Pourquoi `/submit` affiche "404 Not Found" après un rafraîchissement ?
 
+
 Historiquement, le backend FastAPI n'exposait qu'une route `/`. Rafraîchir la
 page `https://…/submit` envoyait donc la requête directement au backend et se
 traduisait par un 404.
@@ -116,6 +117,7 @@ conditions doivent toutefois être réunies :
 Si le fichier `index.html` n'est pas trouvé, la route `/submit` renvoie un code
 503 explicite. Dans ce cas, vérifie que le build frontend est bien déployé à
 côté de l'API ou mets à jour les variables d'environnement ci-dessus.
+
 
 ### Générer les identifiants et secrets OAuth
 

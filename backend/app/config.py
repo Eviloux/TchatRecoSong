@@ -104,6 +104,7 @@ else:
     ADMIN_DEFAULT_PASSWORD_HASH = _fallback_password_hash
     _password_hash_source = "valeur par défaut"
 
+
 # Frontend build (SPA)
 _repo_root = Path(__file__).resolve().parents[2]
 _default_frontend_dist = _repo_root / "frontend" / "dist"
@@ -119,6 +120,7 @@ if _raw_frontend_index:
     FRONTEND_INDEX_PATH = Path(_raw_frontend_index).expanduser().resolve()
 else:
     FRONTEND_INDEX_PATH = FRONTEND_DIST_PATH / "index.html"
+
 
 
 def log_environment_configuration() -> None:
@@ -169,7 +171,9 @@ def log_environment_configuration() -> None:
         _password_hash_source,
     )
 
+
     _log_env_value("FRONTEND_DIST_PATH", _raw_frontend_dist)
     logger.info("FRONTEND_DIST_PATH résolue: %s", FRONTEND_DIST_PATH)
     _log_env_value("FRONTEND_INDEX_PATH", _raw_frontend_index)
     logger.info("FRONTEND_INDEX_PATH résolue: %s", FRONTEND_INDEX_PATH)
+
