@@ -12,14 +12,14 @@ from app.utils.text import normalize
 _UNKNOWN_ARTIST_NORMALIZED = normalize("Artiste inconnu")
 
 
-def _matches_rule(song: Song, rule: BanRule) -> bool:
+def _matches_rule_values(title: str | None, artist: str | None, rule: BanRule) -> bool:
     matches_title = True
     if rule.title:
-        matches_title = normalize(song.title) == normalize(rule.title)
+        matches_title = normalize(title or "") == normalize(rule.title)
 
     matches_artist = True
     if rule.artist:
-        song_artist_norm = normalize(song.artist)
+        song_artist_norm = normalize(artist or "")
         rule_artist_norm = normalize(rule.artist)
 
         if not song_artist_norm or song_artist_norm == _UNKNOWN_ARTIST_NORMALIZED:
@@ -28,6 +28,10 @@ def _matches_rule(song: Song, rule: BanRule) -> bool:
             matches_artist = song_artist_norm == rule_artist_norm
 
     return matches_title and matches_artist
+
+
+def _matches_rule(song: Song, rule: BanRule) -> bool:
+    return _matches_rule_values(song.title, song.artist, rule)
 
 
 def _apply_rule_to_existing_songs(db: Session, rule: BanRule) -> None:
@@ -94,13 +98,12 @@ def delete_ban_rule(db: Session, rule_id: int) -> bool:
 def list_ban_rules(db: Session):
     return db.query(BanRule).order_by(BanRule.id.desc()).all()
 
-def is_banned(db: Session, title: str, artist: str, link: str):
+def is_banned(db: Session, title: str | None, artist: str | None, link: str | None):
     if link:
-        if db.query(BanRule).filter(BanRule.link == link).first():
-            return True
-
-    normalized_title = normalize(title)
-    normalized_artist = normalize(artist)
+        normalized_link = link.strip()
+        if normalized_link:
+            if db.query(BanRule).filter(BanRule.link == normalized_link).first():
+                return True
 
     candidate_rules = (
         db.query(BanRule)
@@ -109,15 +112,7 @@ def is_banned(db: Session, title: str, artist: str, link: str):
     )
 
     for rule in candidate_rules:
-        matches_title = True
-        if rule.title:
-            matches_title = normalize(rule.title) == normalized_title
-
-        matches_artist = True
-        if rule.artist:
-            matches_artist = normalize(rule.artist) == normalized_artist
-
-        if matches_title and matches_artist:
+        if _matches_rule_values(title, artist, rule):
             return True
 
     return False
