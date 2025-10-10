@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from typing import Iterable
 
 from dotenv import load_dotenv
@@ -104,6 +105,24 @@ else:
     _password_hash_source = "valeur par défaut"
 
 
+# Frontend build (SPA)
+_repo_root = Path(__file__).resolve().parents[2]
+_default_frontend_dist = _repo_root / "frontend" / "dist"
+
+_raw_frontend_dist = os.getenv("FRONTEND_DIST_PATH")
+if _raw_frontend_dist:
+    FRONTEND_DIST_PATH = Path(_raw_frontend_dist).expanduser().resolve()
+else:
+    FRONTEND_DIST_PATH = _default_frontend_dist
+
+_raw_frontend_index = os.getenv("FRONTEND_INDEX_PATH")
+if _raw_frontend_index:
+    FRONTEND_INDEX_PATH = Path(_raw_frontend_index).expanduser().resolve()
+else:
+    FRONTEND_INDEX_PATH = FRONTEND_DIST_PATH / "index.html"
+
+
+
 def log_environment_configuration() -> None:
     """Journalise les valeurs brutes et interprétées des variables d'environnement."""
 
@@ -151,4 +170,10 @@ def log_environment_configuration() -> None:
         "ADMIN_DEFAULT_PASSWORD_HASH utilisée (%s)",
         _password_hash_source,
     )
+
+
+    _log_env_value("FRONTEND_DIST_PATH", _raw_frontend_dist)
+    logger.info("FRONTEND_DIST_PATH résolue: %s", FRONTEND_DIST_PATH)
+    _log_env_value("FRONTEND_INDEX_PATH", _raw_frontend_index)
+    logger.info("FRONTEND_INDEX_PATH résolue: %s", FRONTEND_INDEX_PATH)
 

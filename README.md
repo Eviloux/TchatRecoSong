@@ -97,21 +97,27 @@ est commentée directement dans ces fichiers, mais voici un rappel synthétique�
 
 ### Pourquoi `/submit` affiche "404 Not Found" après un rafraîchissement ?
 
-L'URL `/submit` est définie côté frontend par le routeur Vue (`createWebHistory`).
-Tant que la navigation se fait via les liens internes, c'est le navigateur qui gère
-la transition vers la page de soumission. En revanche, lorsqu'on actualise
-directement `https://…/submit`, la requête HTTP est renvoyée telle quelle au
-serveur. Si c'est le backend FastAPI qui reçoit cette requête, il répond 404
-car il n'expose qu'une racine `/` (voir `backend/app/main.py`) : aucune route
-`/submit` n'existe côté API. Il faut donc s'assurer que le service frontend —
-celui qui sert les fichiers Vite compilés via `frontend/server.js` — reçoit les
-requêtes `/submit` et renvoie `index.html` en fallback. Concrètement :
 
-1. Vérifie que tes DNS / ton reverse-proxy pointent bien `tchatrecosong-front…`
-   vers le service Node qui exécute `npm run start`.
-2. Déploie la dernière version du frontend : le serveur Node intégré redirige `/`
-   vers `/submit` et renvoie systématiquement `index.html` pour les URL sans
-   extension, ce qui évite les 404 au rafraîchissement.
+Historiquement, le backend FastAPI n'exposait qu'une route `/`. Rafraîchir la
+page `https://…/submit` envoyait donc la requête directement au backend et se
+traduisait par un 404.
+
+Depuis la mise à jour du backend, la route `/submit` renvoie automatiquement le
+fichier `index.html` du build Vite si celui-ci est présent sur le serveur. Deux
+conditions doivent toutefois être réunies :
+
+1. **Le build frontend doit être disponible localement.** Par défaut, le backend
+   cherche `frontend/dist/index.html`. Si ton pipeline de déploiement génère le
+   build ailleurs, définis `FRONTEND_DIST_PATH` (et éventuellement
+   `FRONTEND_INDEX_PATH`) pour pointer vers le dossier adéquat.
+2. **Les assets du dossier `dist/assets` doivent être copiés avec le build.**
+   Lorsque le dossier existe, le backend les expose automatiquement sous
+   `https://…/assets/...`.
+
+Si le fichier `index.html` n'est pas trouvé, la route `/submit` renvoie un code
+503 explicite. Dans ce cas, vérifie que le build frontend est bien déployé à
+côté de l'API ou mets à jour les variables d'environnement ci-dessus.
+
 
 ### Générer les identifiants et secrets OAuth
 
