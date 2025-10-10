@@ -27,6 +27,7 @@ def _matches_rule_values(title: str | None, artist: str | None, rule: BanRule) -
             rule_title_norm, song_title_norm
         )
 
+
     matches_artist = True
     if rule.artist:
         song_artist_norm = normalize(artist or "")

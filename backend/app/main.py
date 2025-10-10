@@ -3,7 +3,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
 from fastapi.responses import FileResponse, RedirectResponse
+
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
 
@@ -11,7 +13,9 @@ from app.config import (
     CORS_ORIGINS,
     FRONTEND_DIST_PATH,
     FRONTEND_INDEX_PATH,
+
     FRONTEND_SUBMIT_REDIRECT_URL,
+
     log_environment_configuration,
 )
 from app.api.routes import songs, ban_rules, public_submissions, auth
@@ -31,7 +35,9 @@ app = FastAPI(title="Twitch Song Recommender")
 
 app.state.frontend_index_path = FRONTEND_INDEX_PATH
 app.state.frontend_dist_path = FRONTEND_DIST_PATH
+
 app.state.frontend_submit_redirect = FRONTEND_SUBMIT_REDIRECT_URL
+
 
 
 @app.on_event("startup")
@@ -91,6 +97,7 @@ def _resolve_frontend_index_path() -> Path | None:
 @app.get("/submit", include_in_schema=False)
 def serve_submit() -> FileResponse:
     index_path = _resolve_frontend_index_path()
+
     if index_path is not None and index_path.exists():
         return FileResponse(index_path)
 
@@ -105,6 +112,7 @@ def serve_submit() -> FileResponse:
             "déployé sur le serveur backend."
         ),
     )
+
 
 
 def _mount_frontend_assets() -> None:

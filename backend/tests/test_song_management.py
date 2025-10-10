@@ -273,6 +273,7 @@ def test_is_banned_handles_unknown_artist_placeholder(session: Session) -> None:
     )
 
 
+
 def test_is_banned_matches_partial_title(session: Session) -> None:
     ban_crud.add_ban_rule(
         session,
@@ -288,3 +289,4 @@ def test_is_banned_matches_partial_title(session: Session) -> None:
         )
         is True
     )
+

@@ -104,6 +104,7 @@ else:
     ADMIN_DEFAULT_PASSWORD_HASH = _fallback_password_hash
     _password_hash_source = "valeur par défaut"
 
+
 # Frontend build (SPA)
 _repo_root = Path(__file__).resolve().parents[2]
 _default_frontend_dist = _repo_root / "frontend" / "dist"
@@ -120,10 +121,12 @@ if _raw_frontend_index:
 else:
     FRONTEND_INDEX_PATH = FRONTEND_DIST_PATH / "index.html"
 
+
 _raw_frontend_submit_redirect = os.getenv("FRONTEND_SUBMIT_REDIRECT_URL")
 FRONTEND_SUBMIT_REDIRECT_URL = (
     _raw_frontend_submit_redirect.strip() if _raw_frontend_submit_redirect else None
 )
+
 
 
 def log_environment_configuration() -> None:
@@ -174,13 +177,16 @@ def log_environment_configuration() -> None:
         _password_hash_source,
     )
 
+
     _log_env_value("FRONTEND_DIST_PATH", _raw_frontend_dist)
     logger.info("FRONTEND_DIST_PATH résolue: %s", FRONTEND_DIST_PATH)
     _log_env_value("FRONTEND_INDEX_PATH", _raw_frontend_index)
     logger.info("FRONTEND_INDEX_PATH résolue: %s", FRONTEND_INDEX_PATH)
+
     _log_env_value("FRONTEND_SUBMIT_REDIRECT_URL", _raw_frontend_submit_redirect)
     if FRONTEND_SUBMIT_REDIRECT_URL:
         logger.info(
             "FRONTEND_SUBMIT_REDIRECT_URL interprétée: %s",
             FRONTEND_SUBMIT_REDIRECT_URL,
         )
+

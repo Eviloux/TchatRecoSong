@@ -6,7 +6,9 @@ from app.main import app
 def test_submit_serves_index_html(tmp_path):
     original_index = getattr(app.state, "frontend_index_path", None)
     original_dist = getattr(app.state, "frontend_dist_path", None)
+
     original_redirect = getattr(app.state, "frontend_submit_redirect", None)
+
 
     try:
         index_file = tmp_path / "index.html"
@@ -14,7 +16,9 @@ def test_submit_serves_index_html(tmp_path):
 
         app.state.frontend_index_path = index_file
         app.state.frontend_dist_path = tmp_path
+
         app.state.frontend_submit_redirect = None
+
 
         with TestClient(app) as client:
             response = client.get("/submit")
@@ -25,6 +29,7 @@ def test_submit_serves_index_html(tmp_path):
     finally:
         app.state.frontend_index_path = original_index
         app.state.frontend_dist_path = original_dist
+
         app.state.frontend_submit_redirect = original_redirect
 
 
@@ -44,3 +49,4 @@ def test_submit_redirects_when_index_missing(monkeypatch):
     finally:
         app.state.frontend_index_path = original_index
         app.state.frontend_submit_redirect = original_redirect
+
