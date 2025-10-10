@@ -15,6 +15,7 @@ from jwt.exceptions import MissingRequiredClaimError
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
 from app.config import (
     ADMIN_JWT_SECRET,
@@ -22,6 +23,8 @@ from app.config import (
     ALLOWED_GOOGLE_EMAILS,
     GOOGLE_CLIENT_ID,
 )
+from app.crud import admin_user as crud_admin_user
+from app.utils.security import verify_password
 
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 GOOGLE_ISSUERS = {"https://accounts.google.com", "accounts.google.com"}
@@ -198,6 +201,7 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     except PyJWTError as exc:  # pragma: no cover - dépend du token reçu
         logger.exception("Échec du décodage du token Google (kid=%s)", kid)
         raise AdminAuthError("Token Google invalide") from exc
+
     except Exception as exc:  # pragma: no cover - sécurité supplémentaire
         logger.exception("Erreur inattendue lors du décodage du token Google (kid=%s)", kid)
         raise AdminAuthError("Impossible de vérifier le token Google") from exc
@@ -228,5 +232,31 @@ def authenticate_google(credential: str) -> tuple[str, str]:
     token = issue_admin_token(subject=subject, name=name, provider="google")
     logger.info("Authentification Google réussie (subject=%s, name=%s)", subject, name)
     return token, name
+
+
+def authenticate_email_password(
+    db: Session, *, email: str, password: str
+) -> tuple[str, str]:
+    normalized_email = email.strip().lower()
+    if not normalized_email or not password:
+        raise AdminAuthError("Email et mot de passe requis")
+
+    user = crud_admin_user.get_by_email(db, normalized_email)
+    if user is None or not user.is_active:
+        logger.info("Tentative de connexion pour email inconnu ou inactif: %s", normalized_email)
+        raise AdminAuthError("Identifiants invalides")
+
+    if not verify_password(password, user.password_hash):
+        logger.info("Mot de passe invalide pour %s", normalized_email)
+        raise AdminAuthError("Identifiants invalides")
+
+    display_name = user.display_name or user.email
+    logger.info("Authentification locale réussie pour %s", user.email)
+    token = issue_admin_token(
+        subject=f"local:{user.id}",
+        name=display_name,
+        provider="password",
+    )
+    return token, display_name
 
 

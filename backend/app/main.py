@@ -1,17 +1,35 @@
 import logging
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
 
-from app.config import CORS_ORIGINS, log_environment_configuration
+from app.config import (
+    CORS_ORIGINS,
+    FRONTEND_DIST_PATH,
+    FRONTEND_INDEX_PATH,
+    log_environment_configuration,
+)
 from app.api.routes import songs, ban_rules, public_submissions, auth
 from app import models  # noqa: F401 - ensure models are imported before create_all
-from app.database.connection import Base, check_connection, describe_active_database, engine
+from app.database.connection import (
+    Base,
+    SessionLocal,
+    check_connection,
+    describe_active_database,
+    engine,
+)
+from app.services.admin_user import ensure_default_admin_user
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Twitch Song Recommender")
+
+app.state.frontend_index_path = FRONTEND_INDEX_PATH
+app.state.frontend_dist_path = FRONTEND_DIST_PATH
 
 
 @app.on_event("startup")
@@ -33,6 +51,11 @@ async def startup_checks() -> None:
         )
     else:
         Base.metadata.create_all(bind=engine)
+        session = SessionLocal()
+        try:
+            ensure_default_admin_user(session)
+        finally:
+            session.close()
 
     log_environment_configuration()
 
@@ -54,3 +77,43 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 @app.get("/")
 def root():
     return {"message": "Backend prêt !"}
+
+
+def _resolve_frontend_index_path() -> Path | None:
+    candidate = getattr(app.state, "frontend_index_path", None)
+    if candidate is None:
+        return None
+    return Path(candidate)
+
+
+@app.get("/submit", include_in_schema=False)
+def serve_submit() -> FileResponse:
+    index_path = _resolve_frontend_index_path()
+    if index_path is None or not index_path.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Interface de soumission indisponible : le build frontend n'a pas été "
+                "déployé sur le serveur backend."
+            ),
+        )
+
+    return FileResponse(index_path)
+
+
+def _mount_frontend_assets() -> None:
+    dist_path = getattr(app.state, "frontend_dist_path", None)
+    try:
+        dist_dir = Path(dist_path) if dist_path is not None else None
+    except TypeError:  # pragma: no cover - sécurité supplémentaire
+        dist_dir = None
+
+    if not dist_dir or not dist_dir.exists():
+        return
+
+    assets_dir = dist_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+
+_mount_frontend_assets()
