@@ -92,6 +92,11 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (pathname === '/submit') {
+    sendFile(req, res, indexPath);
+    return;
+  }
+
 
   // Prevent path traversal and normalise the request path relative to the dist directory
   const sanitizedPath = pathname.replace(/\.\.+/g, '.').replace(/^\/+/, '');
