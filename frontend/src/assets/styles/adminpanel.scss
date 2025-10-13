@@ -102,3 +102,53 @@
     font-weight: 600;
   }
 }
+
+@media (max-width: 768px) {
+  .admin-panel {
+    padding: vars.$spacing-medium;
+
+    .ban-list {
+      li {
+        flex-direction: column;
+        align-items: stretch;
+
+        .ban-actions {
+          width: 100%;
+          justify-content: center;
+          flex-wrap: wrap;
+
+          button {
+            flex: 1 1 calc(50% - vars.$spacing-small);
+            min-width: 140px;
+          }
+        }
+      }
+    }
+
+    .ban-form {
+      .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+
+        button {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-panel {
+    .ban-list {
+      li {
+        .ban-actions {
+          button {
+            flex: 1 1 100%;
+          }
+        }
+      }
+    }
+  }
+}
