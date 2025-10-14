@@ -96,6 +96,7 @@ def _resolve_frontend_index_path() -> Path | None:
     return Path(candidate)
 
 
+
 def _build_redirect_target(target_path: str) -> str | None:
     submit_redirect = getattr(app.state, "frontend_submit_redirect", None)
     if submit_redirect:
@@ -128,6 +129,7 @@ def _build_redirect_target(target_path: str) -> str | None:
 
 
 def _serve_frontend_index(target_path: str):
+
     index_path = _resolve_frontend_index_path()
 
     if index_path is not None and index_path.exists():
@@ -149,12 +151,15 @@ def _serve_frontend_index(target_path: str):
 @app.get("/submit", include_in_schema=False)
 @app.get("/submit/", include_in_schema=False)
 def serve_submit():
+
     return _serve_frontend_index("/submit")
+
 
 
 @app.get("/admin", include_in_schema=False)
 @app.get("/admin/", include_in_schema=False)
 def serve_admin():
+
     return _serve_frontend_index("/admin")
 
 
