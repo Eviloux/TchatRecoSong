@@ -72,11 +72,13 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import SongList from '../components/SongList.vue';
 import AdminPanel from '../components/AdminPanel.vue';
 import { getApiUrl } from '../utils/api';
-
-interface AdminProfile {
-  name: string;
-  provider: string;
-}
+import {
+  clearAdminSession,
+  ensureValidStoredAdminSession,
+  loadStoredAdminSession,
+  persistAdminSession,
+  type AdminProfile,
+} from '../utils/adminSession';
 
 type SongListHandle = {
   refresh: () => Promise<void> | void;
@@ -93,9 +95,9 @@ const API_URL = getApiUrl();
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const passwordLoginEnabled = ref(false);
 
-const token = ref<string | null>(localStorage.getItem('admin_token'));
-const storedProfile = localStorage.getItem('admin_profile');
-const profile = ref<AdminProfile | null>(storedProfile ? JSON.parse(storedProfile) : null);
+const storedSession = loadStoredAdminSession();
+const token = ref<string | null>(storedSession.token);
+const profile = ref<AdminProfile | null>(storedSession.profile);
 const error = ref('');
 const songListRef = ref<SongListHandle | null>(null);
 const email = ref('');
@@ -103,17 +105,16 @@ const password = ref('');
 const emailLoginLoading = ref(false);
 
 const storeSession = (authToken: string, provider: string, name: string) => {
+  const sessionProfile: AdminProfile = { name, provider };
   token.value = authToken;
-  profile.value = { name, provider };
-  localStorage.setItem('admin_token', authToken);
-  localStorage.setItem('admin_profile', JSON.stringify(profile.value));
+  profile.value = sessionProfile;
+  persistAdminSession(authToken, sessionProfile);
 };
 
 const logout = () => {
   token.value = null;
   profile.value = null;
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_profile');
+  clearAdminSession();
   email.value = '';
   password.value = '';
 };
@@ -210,6 +211,16 @@ const fetchAuthConfig = async () => {
   }
 };
 
+const refreshStoredSession = async () => {
+  const result = await ensureValidStoredAdminSession();
+  if (result.status === 'valid') {
+    token.value = result.token;
+    profile.value = result.profile;
+  } else if (result.status === 'invalid') {
+    logout();
+  }
+};
+
 const submitEmailLogin = async () => {
   if (!API_URL) {
     error.value = 'API non configurée.';
@@ -265,6 +276,9 @@ onMounted(async () => {
   scheduleGoogleInitRetry();
   await fetchAuthConfig();
   ensureGoogleButton();
+  if (token.value) {
+    await refreshStoredSession();
+  }
 });
 
 onBeforeUnmount(() => {

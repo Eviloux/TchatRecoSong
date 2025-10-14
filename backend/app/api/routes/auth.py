@@ -9,7 +9,12 @@ from app.config import GOOGLE_CLIENT_ID, PASSWORD_LOGIN_ENABLED
 from app.crud import admin_user as crud_admin_user
 from app.database.connection import get_db
 from app.schemas.auth import EmailPasswordLogin
-from app.services.auth import authenticate_email_password, authenticate_google, AdminAuthError
+from app.services.auth import (
+    authenticate_email_password,
+    authenticate_google,
+    AdminAuthError,
+    require_admin,
+)
 
 router = APIRouter()
 
@@ -51,4 +56,15 @@ def auth_config(db: Session = Depends(get_db)) -> dict:
     return {
         "google_client_id": GOOGLE_CLIENT_ID,
         "password_login_enabled": password_enabled,
+    }
+
+
+@router.get("/session")
+def validate_session(payload: dict = Depends(require_admin)) -> dict:
+    """Valide un jeton administrateur et renvoie les informations de profil."""
+
+    return {
+        "subject": payload.get("sub"),
+        "name": payload.get("name"),
+        "provider": payload.get("provider"),
     }
