@@ -113,6 +113,90 @@ body {
   }
 }
 
+@media (max-width: 900px) {
+  .app-main {
+    padding: $spacing-medium;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: $spacing-medium;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-medium;
+
+    .app-nav {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: $spacing-small;
+      justify-content: center;
+
+      a {
+        flex: 1 1 calc(50% - $spacing-small);
+        text-align: center;
+        padding: 0.55rem 0.75rem;
+        border-radius: $radius-medium;
+        background: rgba(15, 23, 42, 0.55);
+      }
+    }
+  }
+
+  .home-view {
+    .hero {
+      text-align: center;
+    }
+
+    .submission-form {
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  .admin-view {
+    .login-options {
+      padding: $spacing-medium;
+
+      .email-login {
+        max-width: none;
+      }
+    }
+
+    .logout {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    .app-nav {
+      a {
+        flex: 1 1 100%;
+      }
+    }
+  }
+
+  .home-view {
+    .hero-title {
+      font-size: 1.5rem;
+    }
+
+    .submission-form {
+      input {
+        font-size: 0.95rem;
+      }
+    }
+  }
+
+  .app-main {
+    padding: $spacing-medium $spacing;
+  }
+}
+
 .admin-view {
   .login-options {
     @include card-style;
