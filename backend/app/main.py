@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +38,7 @@ app.state.frontend_index_path = FRONTEND_INDEX_PATH
 app.state.frontend_dist_path = FRONTEND_DIST_PATH
 
 app.state.frontend_submit_redirect = FRONTEND_SUBMIT_REDIRECT_URL
+app.state.frontend_cors_origins = CORS_ORIGINS
 
 
 
@@ -94,13 +96,46 @@ def _resolve_frontend_index_path() -> Path | None:
     return Path(candidate)
 
 
-def _serve_frontend_index():
+
+def _build_redirect_target(target_path: str) -> str | None:
+    submit_redirect = getattr(app.state, "frontend_submit_redirect", None)
+    if submit_redirect:
+        if target_path == "/submit":
+            return submit_redirect
+
+        parsed = urlparse(submit_redirect)
+        if parsed.scheme and parsed.netloc:
+            base_path = parsed.path.rstrip("/")
+            if base_path.endswith("/submit"):
+                base_path = base_path[: -len("/submit")]
+
+            segments = [segment for segment in [base_path.strip("/"), target_path.lstrip("/")]
+                        if segment]
+            new_path = "/" + "/".join(segments) if segments else "/"
+            return urlunparse((parsed.scheme, parsed.netloc, new_path, "", "", ""))
+
+        return submit_redirect
+
+    cors_origins = getattr(app.state, "frontend_cors_origins", None) or []
+    for origin in cors_origins:
+        parsed = urlparse(origin)
+        if not (parsed.scheme and parsed.netloc):
+            continue
+
+        base = origin.rstrip("/")
+        return f"{base}{target_path}"
+
+    return None
+
+
+def _serve_frontend_index(target_path: str):
+
     index_path = _resolve_frontend_index_path()
 
     if index_path is not None and index_path.exists():
         return FileResponse(index_path)
 
-    redirect_url = getattr(app.state, "frontend_submit_redirect", None)
+    redirect_url = _build_redirect_target(target_path)
     if redirect_url:
         return RedirectResponse(url=redirect_url, status_code=307)
 
@@ -116,13 +151,16 @@ def _serve_frontend_index():
 @app.get("/submit", include_in_schema=False)
 @app.get("/submit/", include_in_schema=False)
 def serve_submit():
-    return _serve_frontend_index()
+
+    return _serve_frontend_index("/submit")
+
 
 
 @app.get("/admin", include_in_schema=False)
 @app.get("/admin/", include_in_schema=False)
 def serve_admin():
-    return _serve_frontend_index()
+
+    return _serve_frontend_index("/admin")
 
 
 
