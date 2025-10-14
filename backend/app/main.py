@@ -94,8 +94,7 @@ def _resolve_frontend_index_path() -> Path | None:
     return Path(candidate)
 
 
-@app.get("/submit", include_in_schema=False)
-def serve_submit() -> FileResponse:
+def _serve_frontend_index():
     index_path = _resolve_frontend_index_path()
 
     if index_path is not None and index_path.exists():
@@ -108,10 +107,22 @@ def serve_submit() -> FileResponse:
     raise HTTPException(
         status_code=503,
         detail=(
-            "Interface de soumission indisponible : le build frontend n'a pas été "
-            "déployé sur le serveur backend."
+            "Interface frontend indisponible : le build n'a pas été déployé sur le "
+            "serveur backend."
         ),
     )
+
+
+@app.get("/submit", include_in_schema=False)
+@app.get("/submit/", include_in_schema=False)
+def serve_submit():
+    return _serve_frontend_index()
+
+
+@app.get("/admin", include_in_schema=False)
+@app.get("/admin/", include_in_schema=False)
+def serve_admin():
+    return _serve_frontend_index()
 
 
 
