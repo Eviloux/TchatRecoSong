@@ -198,6 +198,16 @@ body {
 }
 
 .admin-view {
+  .error {
+    margin: 0 0 $spacing 0;
+    padding: $spacing;
+    border-radius: $radius-medium;
+    background: rgba(220, 38, 38, 0.18);
+    color: $accent-color;
+    font-weight: 600;
+    text-align: center;
+  }
+
   .login-options {
     @include card-style;
     display: grid;
