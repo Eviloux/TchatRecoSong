@@ -5,6 +5,7 @@
       <nav class="app-nav">
         <RouterLink to="/">Soumettre</RouterLink>
         <RouterLink to="/admin">Admin</RouterLink>
+        <RouterLink to="/login">Connexion</RouterLink>
       </nav>
     </header>
     <main class="app-main">

@@ -74,7 +74,9 @@ const router = useRouter();
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
 const passwordLoginEnabled = ref(false);
 
+
 const backendUnavailableMessage = "Le backend n'est pas encore lancé, merci de patienter.";
+
 
 const storedSession = loadStoredAdminSession();
 const token = ref<string | null>(storedSession.token);
@@ -102,6 +104,7 @@ const storeSession = async (authToken: string, provider: string, name: string, s
   await router.replace(redirectTarget.value);
 };
 
+
 const isBackendUnavailableError = (err: unknown) => {
   if (!err) {
     return false;
@@ -116,6 +119,7 @@ const isBackendUnavailableError = (err: unknown) => {
   return false;
 };
 
+
 const callGoogleAuthEndpoint = async (payload: Record<string, string>) => {
   if (!API_URL) {
     error.value = 'API non configurée.';
@@ -129,21 +133,25 @@ const callGoogleAuthEndpoint = async (payload: Record<string, string>) => {
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
+
       if (response.status === 403) {
         throw new Error("Votre utilisateur n'est pas dans la whitelist.");
       }
       const data = await response.json().catch(() => ({ detail: 'Connexion impossible.' }));
       throw new Error(data.detail || 'Connexion impossible.');
+
     }
     const data = await response.json();
     await storeSession(data.token, data.provider, data.name, data.subject);
   } catch (err: any) {
     console.error(err);
+
     if (isBackendUnavailableError(err)) {
       error.value = backendUnavailableMessage;
       return;
     }
     error.value = err?.message || 'Connexion impossible.';
+
   }
 };
 
@@ -231,9 +239,11 @@ const submitEmailLogin = async () => {
     });
 
     if (!response.ok) {
+
       if (response.status === 401 || response.status === 404) {
         throw new Error('Login / mot de passe introuvable en base.');
       }
+
       const payload = await response.json().catch(() => ({ detail: 'Connexion impossible.' }));
       throw new Error(payload.detail || 'Connexion impossible.');
     }
@@ -244,11 +254,13 @@ const submitEmailLogin = async () => {
     await storeSession(data.token, data.provider, data.name, data.subject);
   } catch (err: any) {
     console.error(err);
+
     if (isBackendUnavailableError(err)) {
       error.value = backendUnavailableMessage;
       return;
     }
     error.value = err?.message || 'Connexion impossible.';
+
   } finally {
     emailLoginLoading.value = false;
   }
