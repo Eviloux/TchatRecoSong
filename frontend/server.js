@@ -84,15 +84,7 @@ const server = createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   let pathname = decodeURIComponent(requestUrl.pathname);
 
-  if (pathname === '/') {
-    res.statusCode = 302;
-    res.setHeader('Location', '/submit');
-    setCommonHeaders(res);
-    res.end();
-    return;
-  }
-
-  if (pathname === '/submit') {
+  if (pathname === '/' || pathname === '/submit' || pathname === '/login' || pathname === '/admin') {
     sendFile(req, res, indexPath);
     return;
   }

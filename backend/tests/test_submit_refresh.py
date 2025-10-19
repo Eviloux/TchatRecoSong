@@ -42,6 +42,16 @@ def test_submit_serves_index_html(tmp_path):
         assert response.headers["content-type"].startswith("text/html")
 
 
+def test_root_serves_index_html(tmp_path):
+    with configured_frontend(tmp_path):
+        with TestClient(app) as client:
+            response = client.get("/")
+
+    assert response.status_code == 200
+    assert "SPA ok" in response.text
+    assert response.headers["content-type"].startswith("text/html")
+
+
 def test_submit_redirects_when_index_missing():
     original_index = getattr(app.state, "frontend_index_path", None)
     original_redirect = getattr(app.state, "frontend_submit_redirect", None)
@@ -57,6 +67,27 @@ def test_submit_redirects_when_index_missing():
 
         assert response.status_code == 307
         assert response.headers["location"] == "https://example.com/submit"
+    finally:
+        app.state.frontend_index_path = original_index
+        app.state.frontend_submit_redirect = original_redirect
+        app.state.frontend_cors_origins = original_cors
+
+
+def test_root_redirects_when_index_missing():
+    original_index = getattr(app.state, "frontend_index_path", None)
+    original_redirect = getattr(app.state, "frontend_submit_redirect", None)
+    original_cors = getattr(app.state, "frontend_cors_origins", None)
+
+    try:
+        app.state.frontend_index_path = None
+        app.state.frontend_submit_redirect = "https://example.com/submit"
+        app.state.frontend_cors_origins = []
+
+        with TestClient(app) as client:
+            response = client.get("/", follow_redirects=False)
+
+        assert response.status_code == 307
+        assert response.headers["location"] == "https://example.com/"
     finally:
         app.state.frontend_index_path = original_index
         app.state.frontend_submit_redirect = original_redirect
@@ -119,6 +150,27 @@ def test_redirect_uses_cors_origin_when_no_submit_redirect():
 
         assert response.status_code == 307
         assert response.headers["location"] == "https://front.example/submit"
+    finally:
+        app.state.frontend_index_path = original_index
+        app.state.frontend_submit_redirect = original_redirect
+        app.state.frontend_cors_origins = original_cors
+
+
+def test_root_redirect_uses_cors_origin_when_no_submit_redirect():
+    original_index = getattr(app.state, "frontend_index_path", None)
+    original_redirect = getattr(app.state, "frontend_submit_redirect", None)
+    original_cors = getattr(app.state, "frontend_cors_origins", None)
+
+    try:
+        app.state.frontend_index_path = None
+        app.state.frontend_submit_redirect = None
+        app.state.frontend_cors_origins = ["https://front.example"]
+
+        with TestClient(app) as client:
+            response = client.get("/", follow_redirects=False)
+
+        assert response.status_code == 307
+        assert response.headers["location"] == "https://front.example/"
     finally:
         app.state.frontend_index_path = original_index
         app.state.frontend_submit_redirect = original_redirect
