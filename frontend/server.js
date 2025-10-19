@@ -87,25 +87,10 @@ const server = createServer(async (req, res) => {
   const methodAllowsSpaFallback = req.method === 'GET' || req.method === 'HEAD';
 
   if (methodAllowsSpaFallback) {
-    if (pathname === '/' || pathname === '') {
-      sendFile(req, res, indexPath);
-      return;
-    }
-
     const looksLikeStaticAsset = extname(pathname) !== '';
     if (!looksLikeStaticAsset) {
-      const acceptsHtml = (() => {
-        const acceptHeader = req.headers['accept'];
-        if (!acceptHeader) {
-          return true;
-        }
-        return acceptHeader.includes('text/html');
-      })();
-
-      if (acceptsHtml) {
-        sendFile(req, res, indexPath);
-        return;
-      }
+      sendFile(req, res, indexPath);
+      return;
     }
   }
 
