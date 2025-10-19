@@ -295,4 +295,10 @@ body {
     @include button-style;
     justify-self: flex-start;
   }
+
+  .loading {
+    @include card-style;
+    padding: $spacing-large;
+    text-align: center;
+  }
 }
