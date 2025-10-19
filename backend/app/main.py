@@ -84,9 +84,10 @@ app.include_router(ban_rules.router, prefix="/ban", tags=["BanRules"])
 app.include_router(public_submissions.router, prefix="/public/submissions", tags=["PublicSubmissions"])
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
-@app.get("/")
-def root():
-    return {"message": "Backend prêt !"}
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+def serve_root():
+    return _serve_frontend_index("/")
 
 
 def _resolve_frontend_index_path() -> Path | None:
@@ -161,6 +162,14 @@ def serve_submit():
 def serve_admin():
 
     return _serve_frontend_index("/admin")
+
+
+
+@app.get("/login", include_in_schema=False)
+@app.get("/login/", include_in_schema=False)
+def serve_login():
+
+    return _serve_frontend_index("/login")
 
 
 
