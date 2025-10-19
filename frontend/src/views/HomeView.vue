@@ -12,13 +12,15 @@
         v-model="link"
         type="url"
         placeholder="https://www.youtube.com/watch?v=..."
-        :disabled="loading"
+        :disabled="loading || !backendReady"
         required
       />
-      <button type="submit" :disabled="loading">
+      <button type="submit" :disabled="loading || !backendReady">
         {{ loading ? 'Envoi en cours…' : 'Envoyer ma recommandation' }}
       </button>
     </form>
+
+    <p v-if="!backendReady" class="backend-status">{{ backendWaitMessage }}</p>
 
     <p v-if="feedback" class="feedback" :class="feedbackType">{{ feedback }}</p>
 
@@ -27,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import SongList from '../components/SongList.vue';
 import { getApiUrl } from '../utils/api';
 
@@ -40,10 +42,57 @@ const link = ref('');
 const feedback = ref('');
 const feedbackType = ref<'success' | 'error' | ''>('');
 const loading = ref(false);
+const backendReady = ref(true);
 const songListRef = ref<SongListInstance | null>(null);
+let availabilityTimer: ReturnType<typeof window.setInterval> | undefined;
+const backendWaitMessage = 'Veuillez attendre que le backend soit démarré.';
 
 const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i;
 const SPOTIFY_REGEX = /^(https?:\/\/)?(open\.)?spotify\.com\//i;
+
+const markBackendUnavailable = () => {
+  backendReady.value = false;
+};
+
+const checkBackendAvailability = async () => {
+  if (!API_URL) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/health`, { method: 'GET', cache: 'no-store' });
+    if (response.ok) {
+      backendReady.value = true;
+      if (feedbackType.value === 'error' && feedback.value === backendWaitMessage) {
+        feedback.value = '';
+        feedbackType.value = '';
+      }
+      return;
+    }
+
+    markBackendUnavailable();
+  } catch (error) {
+    console.error('Backend indisponible', error);
+    markBackendUnavailable();
+  }
+};
+
+onMounted(() => {
+  if (!API_URL) {
+    return;
+  }
+
+  markBackendUnavailable();
+  checkBackendAvailability();
+  availabilityTimer = window.setInterval(checkBackendAvailability, 5000);
+});
+
+onBeforeUnmount(() => {
+  if (availabilityTimer) {
+    window.clearInterval(availabilityTimer);
+    availabilityTimer = undefined;
+  }
+});
 
 const submit = async () => {
   if (!API_URL) {
@@ -58,6 +107,12 @@ const submit = async () => {
 
   if (!trimmed || (!YOUTUBE_REGEX.test(trimmed) && !SPOTIFY_REGEX.test(trimmed))) {
     feedback.value = 'Merci de coller un lien YouTube ou Spotify valide.';
+    feedbackType.value = 'error';
+    return;
+  }
+
+  if (!backendReady.value) {
+    feedback.value = backendWaitMessage;
     feedbackType.value = 'error';
     return;
   }
@@ -84,7 +139,12 @@ const submit = async () => {
     }
   } catch (error: any) {
     console.error(error);
-    feedback.value = error.message ?? "Impossible d'enregistrer la chanson.";
+    if (error instanceof TypeError) {
+      feedback.value = backendWaitMessage;
+      markBackendUnavailable();
+    } else {
+      feedback.value = error.message ?? "Impossible d'enregistrer la chanson.";
+    }
     feedbackType.value = 'error';
   } finally {
     loading.value = false;
