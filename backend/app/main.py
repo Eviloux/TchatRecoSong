@@ -165,6 +165,14 @@ def serve_admin():
 
 
 
+@app.get("/login", include_in_schema=False)
+@app.get("/login/", include_in_schema=False)
+def serve_login():
+
+    return _serve_frontend_index("/login")
+
+
+
 def _mount_frontend_assets() -> None:
     dist_path = getattr(app.state, "frontend_dist_path", None)
     try:
