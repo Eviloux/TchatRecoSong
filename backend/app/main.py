@@ -84,6 +84,14 @@ app.include_router(ban_rules.router, prefix="/ban", tags=["BanRules"])
 app.include_router(public_submissions.router, prefix="/public/submissions", tags=["PublicSubmissions"])
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
+
+@app.get("/health", include_in_schema=False)
+def health_check() -> dict[str, str]:
+    """Endpoint minimal utilisé par le frontend pour vérifier la disponibilité."""
+
+    return {"status": "ok"}
+
+
 @app.get("/", include_in_schema=False)
 @app.get("/index.html", include_in_schema=False)
 def serve_root():
