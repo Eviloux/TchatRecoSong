@@ -3,9 +3,13 @@
     <header class="app-header">
       <h1 class="app-title">Tchat Reco Song</h1>
       <nav class="app-nav">
-        <RouterLink to="/">Soumettre</RouterLink>
-        <RouterLink to="/admin">Admin</RouterLink>
-        <RouterLink to="/login">Connexion</RouterLink>
+        <RouterLink
+          v-for="link in navLinks"
+          :key="link.to"
+          :to="link.to"
+        >
+          {{ link.label }}
+        </RouterLink>
       </nav>
     </header>
     <main class="app-main">
@@ -16,4 +20,9 @@
 
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router';
+
+const navLinks = [
+  { to: '/', label: 'Soumettre' },
+  { to: '/admin', label: 'Admin' },
+];
 </script>
