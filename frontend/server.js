@@ -84,17 +84,29 @@ const server = createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   let pathname = decodeURIComponent(requestUrl.pathname);
 
-  if (pathname === '/') {
-    res.statusCode = 302;
-    res.setHeader('Location', '/submit');
-    setCommonHeaders(res);
-    res.end();
-    return;
-  }
+  const methodAllowsSpaFallback = req.method === 'GET' || req.method === 'HEAD';
 
-  if (pathname === '/submit') {
-    sendFile(req, res, indexPath);
-    return;
+  if (methodAllowsSpaFallback) {
+    if (pathname === '/' || pathname === '') {
+      sendFile(req, res, indexPath);
+      return;
+    }
+
+    const looksLikeStaticAsset = extname(pathname) !== '';
+    if (!looksLikeStaticAsset) {
+      const acceptsHtml = (() => {
+        const acceptHeader = req.headers['accept'];
+        if (!acceptHeader) {
+          return true;
+        }
+        return acceptHeader.includes('text/html');
+      })();
+
+      if (acceptsHtml) {
+        sendFile(req, res, indexPath);
+        return;
+      }
+    }
   }
 
 
