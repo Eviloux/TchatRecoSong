@@ -9,4 +9,5 @@ class Song(Base):
     artist = Column(String, index=True)
     link = Column(String, unique=True, index=True)
     thumbnail = Column(String, nullable=True)
+    comment = Column(String, nullable=True)
     votes = Column(Integer, default=1)

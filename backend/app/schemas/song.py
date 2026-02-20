@@ -5,6 +5,7 @@ class SongCreate(BaseModel):
     artist: str
     link: str
     thumbnail: str | None = None
+    comment: str | None = None
 
 class SongOut(SongCreate):
     id: int

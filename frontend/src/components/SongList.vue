@@ -10,6 +10,7 @@
           <h3>{{ song.title }}</h3>
           <p class="artist">{{ song.artist }}</p>
           <a :href="song.link" target="_blank" rel="noopener">Ouvrir le lien</a>
+          <p v-if="song.comment" class="comment">{{ song.comment }}</p>
         </div>
         <div class="song-card__actions">
           <span class="votes">{{ song.votes }} vote(s)</span>
@@ -49,6 +50,7 @@ interface Song {
   title: string;
   artist: string;
   link: string;
+  comment: string | null;
   votes: number;
 }
 
