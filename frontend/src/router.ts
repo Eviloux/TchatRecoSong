@@ -33,6 +33,11 @@ router.beforeEach(async (to) => {
   }
 
   if (to.name === 'login') {
+    // Let the LoginView handle OAuth callbacks (e.g. Twitch ?code=...)
+    if (to.query.code) {
+      return true;
+    }
+
     const { token } = loadStoredAdminSession();
     if (!token) {
       return true;
