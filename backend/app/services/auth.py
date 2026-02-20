@@ -295,9 +295,10 @@ def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str, str]:
 
     if token_resp.status_code != 200:
         logger.warning(
-            "Échec de l'échange du code Twitch (status=%d, body=%s)",
+            "Échec de l'échange du code Twitch (status=%d, body=%s, redirect_uri=%s)",
             token_resp.status_code,
-            token_resp.text[:200],
+            token_resp.text[:500],
+            redirect_uri,
         )
         raise AdminAuthError("Code Twitch invalide ou expiré")
 

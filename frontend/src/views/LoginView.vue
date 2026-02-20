@@ -329,9 +329,17 @@ onMounted(async () => {
   // Handle Twitch authorization code callback: ?code=...
   const twitchCode = route.query.code;
   if (typeof twitchCode === 'string' && twitchCode) {
+    // Remove the code from the URL immediately so a page refresh won't
+    // attempt to exchange the same (now expired) authorization code.
+    const cleanQuery = { ...route.query };
+    delete cleanQuery.code;
+    delete cleanQuery.scope;
+    await router.replace({ path: route.path, query: cleanQuery });
+
     ready.value = true;
     await handleTwitchCallback(twitchCode);
-    return;
+    // Do NOT return here – fall through so the Google button is initialised
+    // even when the Twitch callback fails.
   }
 
   if (token.value) {
