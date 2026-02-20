@@ -24,6 +24,7 @@ from app.config import (
     ALLOWED_TWITCH_LOGINS,
     GOOGLE_CLIENT_ID,
     TWITCH_CLIENT_ID,
+    TWITCH_CLIENT_SECRET,
 )
 from app.crud import admin_user as crud_admin_user
 from app.utils.security import verify_password
@@ -262,73 +263,58 @@ def authenticate_email_password(
     return token, display_name
 
 
-TWITCH_VALIDATE_URL = "https://id.twitch.tv/oauth2/validate"
+TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 TWITCH_USERS_URL = "https://api.twitch.tv/helix/users"
 
 
-def authenticate_twitch(access_token: str) -> tuple[str, str]:
-    """Validate a Twitch OAuth implicit-flow access token and return an admin JWT."""
+def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str]:
+    """Exchange a Twitch authorization code for an access token, then return an admin JWT."""
     if not TWITCH_CLIENT_ID:
         raise AdminAuthError("TWITCH_CLIENT_ID non configuré")
+    if not TWITCH_CLIENT_SECRET:
+        raise AdminAuthError("TWITCH_CLIENT_SECRET non configuré")
 
-    logger.info("Tentative d'authentification Twitch")
+    logger.info("Tentative d'authentification Twitch (authorization code flow)")
 
-    # 1. Validate the token with Twitch
+    # 1. Exchange the authorization code for an access token
     try:
-        with httpx.Client(timeout=5.0) as client:
-            validate_resp = client.get(
-                TWITCH_VALIDATE_URL,
-                headers={"Authorization": f"OAuth {access_token}"},
+        with httpx.Client(timeout=10.0) as client:
+            token_resp = client.post(
+                TWITCH_TOKEN_URL,
+                data={
+                    "client_id": TWITCH_CLIENT_ID,
+                    "client_secret": TWITCH_CLIENT_SECRET,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": redirect_uri,
+                },
             )
     except httpx.HTTPError as exc:
-        logger.exception("Échec de la validation du token Twitch")
-        raise AdminAuthError("Impossible de vérifier le token Twitch") from exc
+        logger.exception("Échec de l'échange du code Twitch")
+        raise AdminAuthError("Impossible de vérifier le code Twitch") from exc
 
-    if validate_resp.status_code == 401:
-        logger.info("Token Twitch invalide ou expiré")
-        raise AdminAuthError("Token Twitch invalide ou expiré")
-
-    if validate_resp.status_code != 200:
+    if token_resp.status_code != 200:
         logger.warning(
-            "Réponse inattendue de Twitch validate (status=%d)",
-            validate_resp.status_code,
+            "Échec de l'échange du code Twitch (status=%d, body=%s)",
+            token_resp.status_code,
+            token_resp.text[:200],
         )
-        raise AdminAuthError("Impossible de vérifier le token Twitch")
+        raise AdminAuthError("Code Twitch invalide ou expiré")
 
     try:
-        validate_data = validate_resp.json()
+        token_data = token_resp.json()
     except ValueError as exc:
-        logger.exception("Réponse Twitch validate illisible")
-        raise AdminAuthError("Impossible de vérifier le token Twitch") from exc
+        logger.exception("Réponse Twitch token illisible")
+        raise AdminAuthError("Impossible de vérifier le code Twitch") from exc
 
-    # Verify the token was issued for our application
-    token_client_id = validate_data.get("client_id", "")
-    if token_client_id.lower() != TWITCH_CLIENT_ID.lower():
-        logger.warning(
-            "Client ID Twitch inattendu (attendu=%s, reçu=%s)",
-            TWITCH_CLIENT_ID,
-            token_client_id,
-        )
-        raise AdminAuthError("Token Twitch émis pour un autre client")
+    access_token = token_data.get("access_token")
+    if not access_token:
+        logger.warning("Pas d'access_token dans la réponse Twitch")
+        raise AdminAuthError("Impossible de vérifier le code Twitch")
 
-    twitch_login = validate_data.get("login", "")
-    twitch_user_id = validate_data.get("user_id", "")
-    logger.info(
-        "Token Twitch validé (login=%s, user_id=%s)",
-        twitch_login,
-        twitch_user_id,
-    )
+    logger.info("Code Twitch échangé avec succès")
 
-    # 2. Check whitelist
-    if ALLOWED_TWITCH_LOGINS and twitch_login.lower() not in ALLOWED_TWITCH_LOGINS:
-        logger.warning("Login Twitch non autorisé (login=%s)", twitch_login)
-        raise AdminAuthError(
-            "Ce compte Twitch n'est pas autorisé à accéder à l'administration",
-            status.HTTP_403_FORBIDDEN,
-        )
-
-    # 3. Fetch display name from Helix API
-    display_name = twitch_login
+    # 2. Fetch user info from Helix API
     try:
         with httpx.Client(timeout=5.0) as client:
             users_resp = client.get(
@@ -338,12 +324,45 @@ def authenticate_twitch(access_token: str) -> tuple[str, str]:
                     "Client-Id": TWITCH_CLIENT_ID,
                 },
             )
-        if users_resp.status_code == 200:
-            users_data = users_resp.json().get("data", [])
-            if users_data:
-                display_name = users_data[0].get("display_name", twitch_login)
-    except Exception:
-        logger.debug("Impossible de récupérer le display_name Twitch, utilisation du login")
+    except httpx.HTTPError as exc:
+        logger.exception("Échec de la récupération du profil Twitch")
+        raise AdminAuthError("Impossible de récupérer le profil Twitch") from exc
+
+    if users_resp.status_code != 200:
+        logger.warning(
+            "Réponse inattendue de Twitch users (status=%d)",
+            users_resp.status_code,
+        )
+        raise AdminAuthError("Impossible de récupérer le profil Twitch")
+
+    try:
+        users_data = users_resp.json().get("data", [])
+    except ValueError as exc:
+        logger.exception("Réponse Twitch users illisible")
+        raise AdminAuthError("Impossible de récupérer le profil Twitch") from exc
+
+    if not users_data:
+        raise AdminAuthError("Aucun profil Twitch trouvé")
+
+    user_info = users_data[0]
+    twitch_login = user_info.get("login", "")
+    twitch_user_id = user_info.get("id", "")
+    display_name = user_info.get("display_name", twitch_login)
+
+    logger.info(
+        "Profil Twitch récupéré (login=%s, user_id=%s, display_name=%s)",
+        twitch_login,
+        twitch_user_id,
+        display_name,
+    )
+
+    # 3. Check whitelist
+    if ALLOWED_TWITCH_LOGINS and twitch_login.lower() not in ALLOWED_TWITCH_LOGINS:
+        logger.warning("Login Twitch non autorisé (login=%s)", twitch_login)
+        raise AdminAuthError(
+            "Ce compte Twitch n'est pas autorisé à accéder à l'administration",
+            status.HTTP_403_FORBIDDEN,
+        )
 
     subject = f"twitch:{twitch_user_id}"
     token = issue_admin_token(subject=subject, name=display_name, provider="twitch")

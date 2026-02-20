@@ -206,19 +206,20 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
+const twitchRedirectUri = `${window.location.origin}/login`;
+
 const startTwitchLogin = () => {
   if (!twitchClientId.value) return;
-  const redirectUri = `${window.location.origin}/login`;
   const params = new URLSearchParams({
     client_id: twitchClientId.value,
-    redirect_uri: redirectUri,
-    response_type: 'token',
+    redirect_uri: twitchRedirectUri,
+    response_type: 'code',
     scope: 'user:read:email',
   });
   window.location.href = `https://id.twitch.tv/oauth2/authorize?${params}`;
 };
 
-const handleTwitchCallback = async (accessToken: string) => {
+const handleTwitchCallback = async (code: string) => {
   if (!API_URL) {
     error.value = 'API non configurée.';
     return;
@@ -229,7 +230,7 @@ const handleTwitchCallback = async (accessToken: string) => {
     const response = await fetch(`${API_URL}/auth/twitch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ access_token: accessToken }),
+      body: JSON.stringify({ code, redirect_uri: twitchRedirectUri }),
     });
     if (!response.ok) {
       if (response.status === 403) {
@@ -325,18 +326,14 @@ watch(googleClientId, () => {
 onMounted(async () => {
   await fetchAuthConfig();
 
-  // Handle Twitch implicit flow callback: #access_token=...
-  const hash = window.location.hash;
-  if (hash.includes('access_token=')) {
-    const params = new URLSearchParams(hash.substring(1));
-    const twitchAccessToken = params.get('access_token');
-    // Clear the hash to avoid re-processing on refresh
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-    if (twitchAccessToken) {
-      ready.value = true;
-      await handleTwitchCallback(twitchAccessToken);
-      return;
-    }
+  // Handle Twitch authorization code callback: ?code=...
+  const twitchCode = route.query.code;
+  if (typeof twitchCode === 'string' && twitchCode) {
+    // Clear the code from the URL to avoid re-processing on refresh
+    history.replaceState(null, '', window.location.pathname);
+    ready.value = true;
+    await handleTwitchCallback(twitchCode);
+    return;
   }
 
   if (token.value) {
