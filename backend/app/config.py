@@ -86,6 +86,7 @@ _raw_allowed_google = os.getenv("ALLOWED_GOOGLE_EMAILS", "")
 ALLOWED_GOOGLE_EMAILS = set(_split_env(_raw_allowed_google))
 
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
+TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 
 _raw_allowed_twitch = os.getenv("ALLOWED_TWITCH_LOGINS", "")
 ALLOWED_TWITCH_LOGINS = {v.lower() for v in _split_env(_raw_allowed_twitch)}
@@ -169,6 +170,7 @@ def log_environment_configuration() -> None:
     _log_collection("ALLOWED_GOOGLE_EMAILS", sorted(ALLOWED_GOOGLE_EMAILS))
 
     _log_env_value("TWITCH_CLIENT_ID", TWITCH_CLIENT_ID)
+    _log_env_value("TWITCH_CLIENT_SECRET", TWITCH_CLIENT_SECRET, mask=True)
     _log_env_value("ALLOWED_TWITCH_LOGINS", _raw_allowed_twitch)
     _log_collection("ALLOWED_TWITCH_LOGINS", sorted(ALLOWED_TWITCH_LOGINS))
 

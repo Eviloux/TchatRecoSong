@@ -25,15 +25,23 @@ class EmailPasswordLogin(BaseModel):
         return value
 
 
-class TwitchTokenPayload(BaseModel):
-    access_token: str
+class TwitchCodePayload(BaseModel):
+    code: str
+    redirect_uri: str
 
-    @field_validator("access_token")
+    @field_validator("code")
     @classmethod
-    def _ensure_token_not_empty(cls, value: str) -> str:
+    def _ensure_code_not_empty(cls, value: str) -> str:
         if not value or not value.strip():
-            raise ValueError("Le token Twitch est requis")
+            raise ValueError("Le code Twitch est requis")
+        return value.strip()
+
+    @field_validator("redirect_uri")
+    @classmethod
+    def _ensure_redirect_uri_not_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Le redirect_uri est requis")
         return value.strip()
 
 
-__all__ = ["EmailPasswordLogin", "TwitchTokenPayload"]
+__all__ = ["EmailPasswordLogin", "TwitchCodePayload"]

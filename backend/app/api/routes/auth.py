@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import GOOGLE_CLIENT_ID, PASSWORD_LOGIN_ENABLED, TWITCH_CLIENT_ID
 from app.crud import admin_user as crud_admin_user
 from app.database.connection import get_db
-from app.schemas.auth import EmailPasswordLogin, TwitchTokenPayload
+from app.schemas.auth import EmailPasswordLogin, TwitchCodePayload
 from app.services.auth import (
     authenticate_email_password,
     authenticate_google,
@@ -47,9 +47,9 @@ def login_password(
 
 
 @router.post("/twitch")
-def login_twitch(payload: TwitchTokenPayload) -> dict:
+def login_twitch(payload: TwitchCodePayload) -> dict:
     logger.info("Requête d'authentification Twitch reçue")
-    token, name = authenticate_twitch(payload.access_token)
+    token, name = authenticate_twitch(payload.code, payload.redirect_uri)
     logger.info("Authentification Twitch terminée pour %s", name)
     return {"token": token, "provider": "twitch", "name": name}
 
