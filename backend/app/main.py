@@ -2,10 +2,10 @@ import logging
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from slowapi.errors import RateLimitExceeded
 
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
@@ -33,6 +33,14 @@ from app.services.admin_user import ensure_default_admin_user
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Twitch Song Recommender")
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Trop de requêtes. Réessaie dans quelques instants."},
+    )
 
 app.state.frontend_index_path = FRONTEND_INDEX_PATH
 app.state.frontend_dist_path = FRONTEND_DIST_PATH
@@ -74,9 +82,19 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 
 # Routes
 app.include_router(songs.router, prefix="/songs", tags=["Songs"])

@@ -11,10 +11,20 @@
         id="link"
         v-model="link"
         type="url"
+        maxlength="2000"
         placeholder="https://www.youtube.com/watch?v=..."
         :disabled="loading || !backendReady"
         required
       />
+      <label for="comment">Commentaire (optionnel)</label>
+      <textarea
+        id="comment"
+        v-model="comment"
+        maxlength="1000"
+        placeholder="Un petit mot sur cette chanson…"
+        :disabled="loading || !backendReady"
+        rows="2"
+      ></textarea>
       <button type="submit" :disabled="loading || !backendReady">
         {{ loading ? 'Envoi en cours…' : 'Envoyer ma recommandation' }}
       </button>
@@ -39,6 +49,7 @@ type SongListInstance = {
 
 const API_URL = getApiUrl();
 const link = ref('');
+const comment = ref('');
 const feedback = ref('');
 const feedbackType = ref<'success' | 'error' | ''>('');
 const loading = ref(false);
@@ -122,7 +133,7 @@ const submit = async () => {
     const response = await fetch(`${API_URL}/public/submissions/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ link: trimmed }),
+      body: JSON.stringify({ link: trimmed, comment: comment.value.trim() || null }),
     });
 
     if (!response.ok) {
@@ -133,6 +144,7 @@ const submit = async () => {
     feedback.value = 'Merci ! Ta recommandation a été enregistrée.';
     feedbackType.value = 'success';
     link.value = '';
+    comment.value = '';
 
     if (songListRef.value) {
       await songListRef.value.refresh();

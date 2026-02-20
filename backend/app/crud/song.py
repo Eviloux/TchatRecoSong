@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.song import Song
 from app.schemas.song import SongCreate
@@ -17,7 +18,10 @@ def add_or_increment_song(db: Session, song_data: SongCreate):
         song = db.query(Song).filter(Song.link == song_data.link).first()
 
     if song is None:
-        candidates = db.query(Song).all()
+        candidates = db.query(Song).filter(
+            func.lower(Song.title) == song_data.title.strip().lower(),
+            func.lower(Song.artist) == song_data.artist.strip().lower(),
+        ).all()
         for candidate in candidates:
             if (
                 normalize(candidate.title or "") == title_norm
