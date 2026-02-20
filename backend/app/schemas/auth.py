@@ -25,4 +25,15 @@ class EmailPasswordLogin(BaseModel):
         return value
 
 
-__all__ = ["EmailPasswordLogin"]
+class TwitchTokenPayload(BaseModel):
+    access_token: str
+
+    @field_validator("access_token")
+    @classmethod
+    def _ensure_token_not_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Le token Twitch est requis")
+        return value.strip()
+
+
+__all__ = ["EmailPasswordLogin", "TwitchTokenPayload"]

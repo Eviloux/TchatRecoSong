@@ -41,6 +41,18 @@
       </div>
 
       <div id="google-login" class="login-button" v-if="googleClientId"></div>
+
+      <div v-if="twitchClientId && (passwordLoginEnabled || googleClientId)" class="login-divider" role="presentation">
+        <span>ou</span>
+      </div>
+
+      <button v-if="twitchClientId" class="twitch-login-btn" :disabled="twitchLoginLoading" @click="startTwitchLogin">
+        <svg width="20" height="20" viewBox="0 0 256 268" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.458 0L0 46.556v186.2h63.983v34.934h34.932l34.897-34.934h52.36L256 162.954V0H17.458zm23.259 23.263H232.73v128.029l-40.739 40.742H128L93.1 226.93v-34.896H40.717V23.263zm63.983 93.085h23.263V58.17H104.7v58.178zm63.992 0h23.263V58.17h-23.263v58.178z"/>
+        </svg>
+        {{ twitchLoginLoading ? 'Connexion Twitch…' : 'Se connecter avec Twitch' }}
+      </button>
+
       <p class="login-hint">
         L'identifiant OAuth est récupéré automatiquement auprès de l'API. Utilisez vos identifiants locaux si le bouton
         n'apparaît pas.
@@ -72,7 +84,9 @@ const route = useRoute();
 const router = useRouter();
 
 const googleClientId = ref<string | null>(import.meta.env.VITE_GOOGLE_CLIENT_ID || null);
+const twitchClientId = ref<string | null>(import.meta.env.VITE_TWITCH_CLIENT_ID || null);
 const passwordLoginEnabled = ref(false);
+const twitchLoginLoading = ref(false);
 
 const backendUnavailableMessage = "Le backend n'est pas encore lancé, merci de patienter.";
 
@@ -192,6 +206,52 @@ const scheduleGoogleInitRetry = () => {
   }, 250);
 };
 
+const startTwitchLogin = () => {
+  if (!twitchClientId.value) return;
+  const redirectUri = `${window.location.origin}/login`;
+  const params = new URLSearchParams({
+    client_id: twitchClientId.value,
+    redirect_uri: redirectUri,
+    response_type: 'token',
+    scope: 'user:read:email',
+  });
+  window.location.href = `https://id.twitch.tv/oauth2/authorize?${params}`;
+};
+
+const handleTwitchCallback = async (accessToken: string) => {
+  if (!API_URL) {
+    error.value = 'API non configurée.';
+    return;
+  }
+  twitchLoginLoading.value = true;
+  try {
+    error.value = '';
+    const response = await fetch(`${API_URL}/auth/twitch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: accessToken }),
+    });
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error("Ce compte Twitch n'est pas autorisé à accéder à l'administration.");
+      }
+      const data = await response.json().catch(() => ({ detail: 'Connexion Twitch impossible.' }));
+      throw new Error(data.detail || 'Connexion Twitch impossible.');
+    }
+    const data = await response.json();
+    await storeSession(data.token, data.provider, data.name, data.subject);
+  } catch (err: any) {
+    console.error(err);
+    if (isBackendUnavailableError(err)) {
+      error.value = backendUnavailableMessage;
+      return;
+    }
+    error.value = err?.message || 'Connexion Twitch impossible.';
+  } finally {
+    twitchLoginLoading.value = false;
+  }
+};
+
 const fetchAuthConfig = async () => {
   if (!API_URL) return;
   try {
@@ -200,6 +260,9 @@ const fetchAuthConfig = async () => {
     const data = await response.json();
     if (data.google_client_id) {
       googleClientId.value = data.google_client_id;
+    }
+    if (data.twitch_client_id) {
+      twitchClientId.value = data.twitch_client_id;
     }
     if (typeof data.password_login_enabled === 'boolean') {
       passwordLoginEnabled.value = data.password_login_enabled;
@@ -261,6 +324,20 @@ watch(googleClientId, () => {
 
 onMounted(async () => {
   await fetchAuthConfig();
+
+  // Handle Twitch implicit flow callback: #access_token=...
+  const hash = window.location.hash;
+  if (hash.includes('access_token=')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const twitchAccessToken = params.get('access_token');
+    // Clear the hash to avoid re-processing on refresh
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (twitchAccessToken) {
+      ready.value = true;
+      await handleTwitchCallback(twitchAccessToken);
+      return;
+    }
+  }
 
   if (token.value) {
     const validation = await ensureValidStoredAdminSession();
