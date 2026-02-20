@@ -2,12 +2,6 @@
 
 @use 'variables' as vars;
 
-@mixin flex-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 @mixin input-style {
   padding: vars.$spacing;
   border-radius: vars.$radius-medium;

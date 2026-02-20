@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.crud import song as crud_song
@@ -14,6 +16,8 @@ from app.schemas.song import SongOut
 from app.services.song_metadata import MetadataError, fetch_song_metadata
 
 router = APIRouter()
+
+limiter = Limiter(key_func=get_remote_address)
 
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/", re.IGNORECASE)
 SPOTIFY_REGEX = re.compile(r"^(https?://)?(open\.)?spotify\.com/", re.IGNORECASE)
@@ -33,8 +37,9 @@ def _validate_link(link: str) -> str:
 
 
 @router.post("/", response_model=SongOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 def submit_song(
-    payload: PublicSubmissionPayload, db: Session = Depends(get_db)
+    request: Request, payload: PublicSubmissionPayload, db: Session = Depends(get_db)
 ) -> SongOut:
     link = _validate_link(payload.link)
 
@@ -45,6 +50,9 @@ def submit_song(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
+
+    if payload.comment:
+        metadata.comment = payload.comment
 
     song = crud_song.add_or_increment_song(db, metadata)
     if song is None:
