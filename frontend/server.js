@@ -31,8 +31,9 @@ function getContentType(filePath) {
 }
 
 function setCommonHeaders(res) {
-  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
-
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 }
 
 function sendFile(req, res, filePath, status = 200) {

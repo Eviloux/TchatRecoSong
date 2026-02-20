@@ -11,6 +11,7 @@
         id="link"
         v-model="link"
         type="url"
+        maxlength="2000"
         placeholder="https://www.youtube.com/watch?v=..."
         :disabled="loading || !backendReady"
         required
@@ -19,6 +20,7 @@
       <textarea
         id="comment"
         v-model="comment"
+        maxlength="1000"
         placeholder="Un petit mot sur cette chanson…"
         :disabled="loading || !backendReady"
         rows="2"

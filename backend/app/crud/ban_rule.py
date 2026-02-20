@@ -34,7 +34,7 @@ def _matches_rule_values(title: str | None, artist: str | None, rule: BanRule) -
         rule_artist_norm = normalize(rule.artist)
 
         if not song_artist_norm or song_artist_norm == _UNKNOWN_ARTIST_NORMALIZED:
-            matches_artist = True
+            matches_artist = False
         else:
             matches_artist = _normalized_overlap(rule_artist_norm, song_artist_norm)
 

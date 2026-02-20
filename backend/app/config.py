@@ -68,6 +68,13 @@ CORS_ORIGINS = _split_env(_effective_cors)
 
 # Authentification administrateur
 _raw_admin_secret = os.getenv("ADMIN_JWT_SECRET")
+if not _raw_admin_secret:
+    import warnings
+    warnings.warn(
+        "ADMIN_JWT_SECRET non défini ! Utilisation d'un secret par défaut. "
+        "Définir cette variable d'environnement en production.",
+        stacklevel=1,
+    )
 ADMIN_JWT_SECRET = _raw_admin_secret or "super-secret-change-me"
 
 _raw_admin_ttl = os.getenv("ADMIN_TOKEN_TTL_MINUTES")
