@@ -49,9 +49,9 @@ def login_password(
 @router.post("/twitch")
 def login_twitch(payload: TwitchCodePayload) -> dict:
     logger.info("Requête d'authentification Twitch reçue")
-    token, name = authenticate_twitch(payload.code, payload.redirect_uri)
+    token, name, subject = authenticate_twitch(payload.code, payload.redirect_uri)
     logger.info("Authentification Twitch terminée pour %s", name)
-    return {"token": token, "provider": "twitch", "name": name}
+    return {"token": token, "provider": "twitch", "name": name, "subject": subject}
 
 
 @router.get("/config")

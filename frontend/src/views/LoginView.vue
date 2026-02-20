@@ -329,8 +329,6 @@ onMounted(async () => {
   // Handle Twitch authorization code callback: ?code=...
   const twitchCode = route.query.code;
   if (typeof twitchCode === 'string' && twitchCode) {
-    // Clear the code from the URL to avoid re-processing on refresh
-    history.replaceState(null, '', window.location.pathname);
     ready.value = true;
     await handleTwitchCallback(twitchCode);
     return;

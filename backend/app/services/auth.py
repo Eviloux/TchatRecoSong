@@ -267,7 +267,7 @@ TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 TWITCH_USERS_URL = "https://api.twitch.tv/helix/users"
 
 
-def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str]:
+def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str, str]:
     """Exchange a Twitch authorization code for an access token, then return an admin JWT."""
     if not TWITCH_CLIENT_ID:
         raise AdminAuthError("TWITCH_CLIENT_ID non configuré")
@@ -367,6 +367,6 @@ def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str]:
     subject = f"twitch:{twitch_user_id}"
     token = issue_admin_token(subject=subject, name=display_name, provider="twitch")
     logger.info("Authentification Twitch réussie (subject=%s, name=%s)", subject, display_name)
-    return token, display_name
+    return token, display_name, subject
 
 
