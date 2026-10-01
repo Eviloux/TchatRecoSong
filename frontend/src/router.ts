@@ -7,7 +7,8 @@ import { ensureValidStoredAdminSession, loadStoredAdminSession } from './utils/a
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'submit', component: HomeView },
+    // `/submit` est l'URL partagée dans le tchat Twitch.
+    { path: '/', name: 'submit', component: HomeView, alias: '/submit' },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/admin', name: 'admin', component: AdminView, meta: { requiresAuth: true } },
   ],

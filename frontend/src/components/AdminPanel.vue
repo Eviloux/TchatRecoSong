@@ -97,9 +97,12 @@ const editingRule = computed(() =>
 
 
 const fetchBanRules = async () => {
-  if (!API_URL) return;
+  if (!API_URL || !props.token) return;
   try {
-    const response = await fetch(`${API_URL}/ban/`);
+    // Les règles de modération ne sont visibles que par les administrateurs.
+    const response = await fetch(`${API_URL}/ban/`, {
+      headers: { Authorization: `Bearer ${props.token}` },
+    });
     if (!response.ok) throw new Error('Erreur serveur');
     banRules.value = await response.json();
   } catch (error) {
@@ -214,6 +217,7 @@ watch(
   (newToken) => {
     if (!newToken) {
       cancelEdit();
+      banRules.value = [];
     }
     fetchBanRules();
   }

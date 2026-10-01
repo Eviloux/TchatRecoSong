@@ -58,7 +58,7 @@ const songListRef = ref<SongListInstance | null>(null);
 let availabilityTimer: ReturnType<typeof window.setInterval> | undefined;
 const backendWaitMessage = 'Veuillez attendre que le backend soit démarré.';
 
-const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i;
+const YOUTUBE_REGEX = /^(https?:\/\/)?((www|m)\.)?(youtube\.com|youtu\.be)\//i;
 const SPOTIFY_REGEX = /^(https?:\/\/)?(open\.)?spotify\.com\//i;
 
 const HEALTH_POLL_INTERVAL_MS = 5000;
