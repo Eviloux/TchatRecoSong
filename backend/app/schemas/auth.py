@@ -1,14 +1,17 @@
 import re
 
-from pydantic import BaseModel, field_validator
-
+from pydantic import BaseModel, Field, field_validator
 
 _EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
+class GoogleCredentialPayload(BaseModel):
+    credential: str = Field(min_length=1, max_length=8192)
+
+
 class EmailPasswordLogin(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=320)
+    password: str = Field(max_length=1024)
 
     @field_validator("email")
     @classmethod
@@ -26,8 +29,8 @@ class EmailPasswordLogin(BaseModel):
 
 
 class TwitchCodePayload(BaseModel):
-    code: str
-    redirect_uri: str
+    code: str = Field(max_length=512)
+    redirect_uri: str = Field(max_length=2000)
 
     @field_validator("code")
     @classmethod
@@ -44,4 +47,4 @@ class TwitchCodePayload(BaseModel):
         return value.strip()
 
 
-__all__ = ["EmailPasswordLogin", "TwitchCodePayload"]
+__all__ = ["EmailPasswordLogin", "GoogleCredentialPayload", "TwitchCodePayload"]

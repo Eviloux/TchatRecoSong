@@ -1,9 +1,9 @@
 """Pydantic schemas exposed by the application."""
 
-from .song import SongCreate, SongOut
+from .auth import EmailPasswordLogin
 from .ban_rule import BanRuleCreate, BanRuleOut
 from .public_submission import PublicSubmissionPayload
-from .auth import EmailPasswordLogin
+from .song import SongCreate, SongOut
 
 __all__ = [
     "SongCreate",

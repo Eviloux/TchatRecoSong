@@ -1,38 +1,56 @@
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
-from slowapi.errors import RateLimitExceeded
-
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import OperationalError
 
+from app import models  # noqa: F401 - ensure models are imported before create_all
+from app.api.routes import auth, ban_rules, public_submissions, songs
 from app.config import (
     CORS_ORIGINS,
     FRONTEND_DIST_PATH,
     FRONTEND_INDEX_PATH,
-
     FRONTEND_SUBMIT_REDIRECT_URL,
-
     log_environment_configuration,
 )
-from app.api.routes import songs, ban_rules, public_submissions, auth
-from app import models  # noqa: F401 - ensure models are imported before create_all
-from app.database.connection import (
-    Base,
-    SessionLocal,
-    check_connection,
-    describe_active_database,
-    engine,
-)
+from app.database.connection import Base, SessionLocal, check_connection, engine
 from app.services.admin_user import ensure_default_admin_user
+from app.utils.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Twitch Song Recommender")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Vérifie la connexion PostgreSQL sans bloquer le démarrage du backend."""
+
+    log_environment_configuration()
+    try:
+        check_connection()
+    except OperationalError:  # pragma: no cover - dépend de l'env d'exécution
+        logger.warning(
+            "Le backend démarre sans base de données active : les routes dépendantes "
+            "échoueront tant que la connexion n'est pas rétablie."
+        )
+    else:
+        Base.metadata.create_all(bind=engine)
+        with SessionLocal() as session:
+            ensure_default_admin_user(session)
+    yield
+
+
+app = FastAPI(title="Twitch Song Recommender", lifespan=lifespan)
+app.state.limiter = limiter
+app.state.frontend_index_path = FRONTEND_INDEX_PATH
+app.state.frontend_dist_path = FRONTEND_DIST_PATH
+app.state.frontend_submit_redirect = FRONTEND_SUBMIT_REDIRECT_URL
+app.state.frontend_cors_origins = CORS_ORIGINS
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -41,41 +59,6 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         status_code=429,
         content={"detail": "Trop de requêtes. Réessaie dans quelques instants."},
     )
-
-app.state.frontend_index_path = FRONTEND_INDEX_PATH
-app.state.frontend_dist_path = FRONTEND_DIST_PATH
-
-app.state.frontend_submit_redirect = FRONTEND_SUBMIT_REDIRECT_URL
-app.state.frontend_cors_origins = CORS_ORIGINS
-
-
-
-@app.on_event("startup")
-async def startup_checks() -> None:
-    """Vérifie la connexion PostgreSQL sans bloquer le démarrage du backend."""
-
-    log_environment_configuration()
-
-    try:
-        check_connection()
-    except OperationalError as exc:  # pragma: no cover - dépend de l'env d'exécution
-        snapshot = describe_active_database()
-        logger.error(
-            "Échec de connexion à PostgreSQL avec les paramètres %s", snapshot, exc_info=exc
-        )
-        logger.warning(
-            "Le backend démarre sans base de données active : les routes dépendantes "
-            "échoueront tant que la connexion n'est pas rétablie."
-        )
-    else:
-        Base.metadata.create_all(bind=engine)
-        session = SessionLocal()
-        try:
-            ensure_default_admin_user(session)
-        finally:
-            session.close()
-
-    log_environment_configuration()
 
 
 # Les erreurs non gérées sont converties ici, *à l'intérieur* du middleware CORS
@@ -95,12 +78,12 @@ async def catch_unhandled_exceptions(request: Request, call_next):
         )
 
 
-# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    # Authentification par en-tête Bearer, aucun cookie : pas besoin de credentials.
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
@@ -111,6 +94,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
@@ -128,56 +112,34 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/", include_in_schema=False)
-@app.get("/index.html", include_in_schema=False)
-def serve_root():
-    return _serve_frontend_index("/")
-
-
-def _resolve_frontend_index_path() -> Path | None:
-    candidate = getattr(app.state, "frontend_index_path", None)
-    if candidate is None:
-        return None
-    return Path(candidate)
-
-
-
 def _build_redirect_target(target_path: str) -> str | None:
+    """URL du frontend externe vers laquelle rediriger une page SPA."""
+
     submit_redirect = getattr(app.state, "frontend_submit_redirect", None)
     if submit_redirect:
         if target_path == "/submit":
             return submit_redirect
 
         parsed = urlparse(submit_redirect)
-        if parsed.scheme and parsed.netloc:
-            base_path = parsed.path.rstrip("/")
-            if base_path.endswith("/submit"):
-                base_path = base_path[: -len("/submit")]
-
-            segments = [segment for segment in [base_path.strip("/"), target_path.lstrip("/")]
-                        if segment]
-            new_path = "/" + "/".join(segments) if segments else "/"
-            return urlunparse((parsed.scheme, parsed.netloc, new_path, "", "", ""))
-
-        return submit_redirect
-
-    cors_origins = getattr(app.state, "frontend_cors_origins", None) or []
-    for origin in cors_origins:
-        parsed = urlparse(origin)
         if not (parsed.scheme and parsed.netloc):
-            continue
+            return submit_redirect
 
-        base = origin.rstrip("/")
-        return f"{base}{target_path}"
+        base_path = parsed.path.rstrip("/").removesuffix("/submit")
+        segments = [seg for seg in (base_path.strip("/"), target_path.lstrip("/")) if seg]
+        new_path = "/" + "/".join(segments)
+        return urlunparse((parsed.scheme, parsed.netloc, new_path, "", "", ""))
+
+    for origin in getattr(app.state, "frontend_cors_origins", None) or []:
+        parsed = urlparse(origin)
+        if parsed.scheme and parsed.netloc:
+            return f"{origin.rstrip('/')}{target_path}"
 
     return None
 
 
 def _serve_frontend_index(target_path: str):
-
-    index_path = _resolve_frontend_index_path()
-
-    if index_path is not None and index_path.exists():
+    index_path = getattr(app.state, "frontend_index_path", None)
+    if index_path is not None and Path(index_path).exists():
         return FileResponse(index_path)
 
     redirect_url = _build_redirect_target(target_path)
@@ -186,48 +148,29 @@ def _serve_frontend_index(target_path: str):
 
     raise HTTPException(
         status_code=503,
-        detail=(
-            "Interface frontend indisponible : le build n'a pas été déployé sur le "
-            "serveur backend."
-        ),
+        detail="Interface frontend indisponible : le build n'a pas été déployé sur le serveur backend.",
     )
 
 
-@app.get("/submit", include_in_schema=False)
-@app.get("/submit/", include_in_schema=False)
-def serve_submit():
+def _register_spa_route(path: str, *aliases: str) -> None:
+    def serve_spa():
+        return _serve_frontend_index(path)
 
-    return _serve_frontend_index("/submit")
-
-
-
-@app.get("/admin", include_in_schema=False)
-@app.get("/admin/", include_in_schema=False)
-def serve_admin():
-
-    return _serve_frontend_index("/admin")
+    for alias in (path, *aliases):
+        app.add_api_route(alias, serve_spa, methods=["GET"], include_in_schema=False)
 
 
-
-@app.get("/login", include_in_schema=False)
-@app.get("/login/", include_in_schema=False)
-def serve_login():
-
-    return _serve_frontend_index("/login")
-
+_register_spa_route("/", "/index.html")
+for _page in ("/submit", "/admin", "/login"):
+    _register_spa_route(_page, f"{_page}/")
 
 
 def _mount_frontend_assets() -> None:
     dist_path = getattr(app.state, "frontend_dist_path", None)
-    try:
-        dist_dir = Path(dist_path) if dist_path is not None else None
-    except TypeError:  # pragma: no cover - sécurité supplémentaire
-        dist_dir = None
-
-    if not dist_dir or not dist_dir.exists():
+    if dist_path is None:
         return
 
-    assets_dir = dist_dir / "assets"
+    assets_dir = Path(dist_path) / "assets"
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
 

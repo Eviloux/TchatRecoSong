@@ -3,18 +3,15 @@ from __future__ import annotations
 import logging
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
 import jwt
-
-from jwt import PyJWTError, PyJWK
-from jwt.exceptions import MissingRequiredClaimError
-
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt import PyJWK, PyJWTError
+from jwt.exceptions import MissingRequiredClaimError
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -27,7 +24,7 @@ from app.config import (
     TWITCH_CLIENT_SECRET,
 )
 from app.crud import admin_user as crud_admin_user
-from app.utils.security import verify_password
+from app.utils.security import hash_password, verify_password
 
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 GOOGLE_ISSUERS = {"https://accounts.google.com", "accounts.google.com"}
@@ -37,9 +34,9 @@ _GOOGLE_KEYS_EXPIRATION: float = 0.0
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-# Les logs d'authentification doivent apparaître dans la sortie standard de l'application
-# même lorsqu'elle est exécutée derrière Uvicorn/Gunicorn.  On rattache donc le logger
-# au logger "uvicorn.error" qui est déjà configuré par le serveur HTTP.
+_DUMMY_PASSWORD_HASH = hash_password("timing-equalizer")
+
+# Rattaché à "uvicorn.error", déjà configuré par le serveur, pour apparaître dans les logs.
 logger = logging.getLogger("uvicorn.error").getChild(__name__)
 
 
@@ -94,30 +91,25 @@ def _load_google_public_key(kid: str) -> Any:
     keys = _fetch_google_keys()
     for jwk_data in keys:
         if jwk_data.get("kid") == kid:
-            logger.debug("Clé publique trouvée pour kid=%s", kid)
             try:
-                if isinstance(jwk_data, PyJWK):
-                    return jwk_data.key
-
                 return PyJWK.from_dict(jwk_data).key
-
             except (PyJWTError, ValueError, TypeError) as exc:  # pragma: no cover - dépend du format de la clé
                 logger.exception("Échec du chargement de la clé Google (kid=%s)", kid)
                 raise AdminAuthError("Clé Google invalide") from exc
-
 
     logger.warning("Aucune clé Google ne correspond au kid fourni (kid=%s)", kid)
     raise AdminAuthError("Clé Google introuvable pour le token fourni")
 
 
 def issue_admin_token(*, subject: str, name: str, provider: str) -> str:
-    expiration = datetime.utcnow() + timedelta(minutes=ADMIN_TOKEN_TTL_MINUTES)
+    now = datetime.now(UTC)
     payload = {
         "sub": subject,
         "name": name,
         "provider": provider,
         "role": "admin",
-        "exp": expiration,
+        "iat": now,
+        "exp": now + timedelta(minutes=ADMIN_TOKEN_TTL_MINUTES),
     }
     return jwt.encode(payload, ADMIN_JWT_SECRET, algorithm="HS256")
 
@@ -130,8 +122,13 @@ def require_admin(
 
     token = credentials.credentials
     try:
-        payload = jwt.decode(token, ADMIN_JWT_SECRET, algorithms=["HS256"])
-    except jwt.PyJWTError as exc:  # pragma: no cover - invalid tokens
+        payload = jwt.decode(
+            token,
+            ADMIN_JWT_SECRET,
+            algorithms=["HS256"],
+            options={"require": ["exp", "sub"]},
+        )
+    except PyJWTError as exc:
         raise AdminAuthError("Jeton invalide") from exc
 
     if payload.get("role") != "admin":
@@ -168,31 +165,12 @@ def authenticate_google(credential: str) -> tuple[str, str]:
             audience=GOOGLE_CLIENT_ID,
             options={"verify_iss": False},
         )
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as exc:
         logger.info("Token Google expiré pour kid=%s", kid)
-        raise AdminAuthError("Token Google expiré")
-    except jwt.InvalidAudienceError:
-        try:
-            claims = jwt.decode(
-                credential,
-                options={
-                    "verify_signature": False,
-                    "verify_aud": False,
-                    "verify_iss": False,
-                },
-                algorithms=["RS256"],
-            )
-            audience = claims.get("aud")
-        except Exception:  # pragma: no cover - best effort logging only
-            audience = None
-        logger.warning(
-            "Audience Google inattendue (attendu=%s, reçu=%s, kid=%s)",
-            GOOGLE_CLIENT_ID,
-            audience,
-            kid,
-        )
-        raise AdminAuthError("Client Google non autorisé")
-
+        raise AdminAuthError("Token Google expiré") from exc
+    except jwt.InvalidAudienceError as exc:
+        logger.warning("Audience Google inattendue (kid=%s)", kid)
+        raise AdminAuthError("Client Google non autorisé") from exc
     except MissingRequiredClaimError as exc:
         logger.warning(
             "Claim Google manquant (%s) pour kid=%s",
@@ -201,13 +179,9 @@ def authenticate_google(credential: str) -> tuple[str, str]:
         )
         raise AdminAuthError("Token Google incomplet") from exc
 
-    except PyJWTError as exc:  # pragma: no cover - dépend du token reçu
-        logger.exception("Échec du décodage du token Google (kid=%s)", kid)
+    except PyJWTError as exc:
+        logger.warning("Token Google invalide (kid=%s): %s", kid, exc)
         raise AdminAuthError("Token Google invalide") from exc
-
-    except Exception as exc:  # pragma: no cover - sécurité supplémentaire
-        logger.exception("Erreur inattendue lors du décodage du token Google (kid=%s)", kid)
-        raise AdminAuthError("Impossible de vérifier le token Google") from exc
 
     if idinfo.get("iss") not in GOOGLE_ISSUERS:
         logger.warning(
@@ -217,20 +191,18 @@ def authenticate_google(credential: str) -> tuple[str, str]:
         )
         raise AdminAuthError("Émetteur Google invalide")
 
-    email = idinfo.get("email")
-    logger.info(
-        "Token Google décodé (email=%s, email_verified=%s, iss=%s, aud=%s, sub=%s)",
-        email,
-        idinfo.get("email_verified"),
-        idinfo.get("iss"),
-        idinfo.get("aud"),
-        idinfo.get("sub"),
-    )
-    if ALLOWED_GOOGLE_EMAILS and email not in ALLOWED_GOOGLE_EMAILS:
+    email = (idinfo.get("email") or "").strip().lower()
+    if not email or idinfo.get("email_verified") is not True:
+        logger.warning("Email Google absent ou non vérifié (sub=%s)", idinfo.get("sub"))
+        raise AdminAuthError("Adresse Google non vérifiée", status.HTTP_403_FORBIDDEN)
+
+    # Fail-closed : une liste vide n'autorise personne (sinon tout compte Google
+    # deviendrait administrateur).
+    if email not in ALLOWED_GOOGLE_EMAILS:
         logger.warning("Email Google non autorisé (email=%s)", email)
         raise AdminAuthError("Adresse non autorisée", status.HTTP_403_FORBIDDEN)
 
-    name = idinfo.get("name") or email or "Google Admin"
+    name = idinfo.get("name") or email
     subject = f"google:{idinfo.get('sub')}"
     token = issue_admin_token(subject=subject, name=name, provider="google")
     logger.info("Authentification Google réussie (subject=%s, name=%s)", subject, name)
@@ -246,6 +218,9 @@ def authenticate_email_password(
 
     user = crud_admin_user.get_by_email(db, normalized_email)
     if user is None or not user.is_active:
+        # Hash factice : même temps de réponse qu'un compte existant, pour ne pas
+        # révéler quels e-mails sont enregistrés.
+        verify_password(password, _DUMMY_PASSWORD_HASH)
         logger.info("Tentative de connexion pour email inconnu ou inactif: %s", normalized_email)
         raise AdminAuthError("Identifiants invalides")
 
@@ -342,7 +317,7 @@ def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str, str]:
         logger.exception("Réponse Twitch users illisible")
         raise AdminAuthError("Impossible de récupérer le profil Twitch") from exc
 
-    if not users_data:
+    if not isinstance(users_data, list) or not users_data:
         raise AdminAuthError("Aucun profil Twitch trouvé")
 
     user_info = users_data[0]
@@ -358,7 +333,8 @@ def authenticate_twitch(code: str, redirect_uri: str) -> tuple[str, str, str]:
     )
 
     # 3. Check whitelist
-    if ALLOWED_TWITCH_LOGINS and twitch_login.lower() not in ALLOWED_TWITCH_LOGINS:
+    # Fail-closed : une liste vide n'autorise personne.
+    if not twitch_login or twitch_login.lower() not in ALLOWED_TWITCH_LOGINS:
         logger.warning("Login Twitch non autorisé (login=%s)", twitch_login)
         raise AdminAuthError(
             "Ce compte Twitch n'est pas autorisé à accéder à l'administration",
