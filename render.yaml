@@ -6,10 +6,22 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # Secrets : saisis dans le dashboard Render, jamais dans le dépôt.
       - key: DATABASE_URL
-        value: "postgres://USER:PASSWORD@HOST:PORT/DBNAME"  # <-- remplace par ton URL exacte
+        sync: false
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: TWITCH_CLIENT_SECRET
+        sync: false
+      - key: ALLOWED_GOOGLE_EMAILS
+        sync: false
+      - key: ALLOWED_TWITCH_LOGINS
+        sync: false
       - key: CORS_ORIGINS
         value: "https://tchatrecosong-front.onrender.com"
+      # Render place un proxy devant l'app : nécessaire pour le rate limiting par IP.
+      - key: TRUSTED_PROXY_COUNT
+        value: "1"
 
   - type: web
     name: TchatRecoSong-front
