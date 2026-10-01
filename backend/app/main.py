@@ -77,6 +77,24 @@ async def startup_checks() -> None:
 
     log_environment_configuration()
 
+
+# Les erreurs non gérées sont converties ici, *à l'intérieur* du middleware CORS
+# (ajouté juste après, donc exécuté avant). Sans cela, Starlette produit la 500
+# dans ServerErrorMiddleware, la couche la plus externe : la réponse part sans
+# en-têtes CORS et le navigateur affiche une erreur CORS trompeuse, tandis que
+# le frontend reçoit une TypeError et croit le backend arrêté.
+@app.middleware("http")
+async def catch_unhandled_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception("Erreur non gérée sur %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Erreur interne du serveur. Réessaie dans quelques instants."},
+        )
+
+
 # Middleware CORS
 app.add_middleware(
     CORSMiddleware,
