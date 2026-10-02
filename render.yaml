@@ -1,35 +1,80 @@
+# Configuration de référence Render (utilisable comme Blueprint).
+# Guide pas à pas : docs/deploiement-render.md
+#
+# - Back : service web Python gratuit, gardé éveillé par un ping externe sur /health.
+# - Front : site statique gratuit (CDN, ne s'endort jamais, aucune heure consommée).
+# Les secrets (sync: false) se saisissent dans le tableau de bord, jamais ici.
+
 services:
   - type: web
     name: TchatRecoSong
-    env: python
+    runtime: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
-      # Secrets : saisis dans le dashboard Render, jamais dans le dépôt.
+      - key: PYTHON_VERSION
+        value: "3.13.4"
       - key: DATABASE_URL
         sync: false
       - key: ADMIN_JWT_SECRET
         generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: TWITCH_CLIENT_ID
+        sync: false
       - key: TWITCH_CLIENT_SECRET
         sync: false
       - key: ALLOWED_GOOGLE_EMAILS
         sync: false
       - key: ALLOWED_TWITCH_LOGINS
         sync: false
+      - key: TWITCH_CHANNEL_LOGIN
+        value: music_oceane
+      # URL(s) exacte(s) du front, sans « / » final, séparées par des virgules.
       - key: CORS_ORIGINS
-        value: "https://tchatrecosong-front.onrender.com"
+        sync: false
       # Render place un proxy devant l'app : nécessaire pour le rate limiting par IP.
       - key: TRUSTED_PROXY_COUNT
         value: "1"
 
   - type: web
-    name: TchatRecoSong-front
-    env: node
-    plan: free
+    name: TchatRecoSong-web
+    runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: VITE_API_URL
-        value: "https://tchatrecosong.onrender.com"
+        value: https://tchatrecosong.onrender.com
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      - key: VITE_TWITCH_CLIENT_ID
+        sync: false
+    # Routes Vue (/submit, /admin, /login) : servies par index.html. Render
+    # n'applique la réécriture que si aucun fichier ne correspond au chemin.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    # En-têtes de sécurité (équivalents de l'ancien server.js).
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
