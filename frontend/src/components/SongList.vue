@@ -29,7 +29,6 @@
         <div class="track__info">
           <a :href="song.link" target="_blank" rel="noopener noreferrer" class="track__title">{{ song.title }}</a>
           <span class="track__artist">{{ song.artist }}</span>
-          <span v-if="song.comment" class="track__comment">« {{ song.comment }} »</span>
         </div>
         <span v-if="providerOf(song.link)" class="chip" :class="`chip--${providerOf(song.link)}`">
           {{ providerOf(song.link) === 'youtube' ? 'YouTube' : 'Spotify' }}
@@ -57,6 +56,10 @@
             Supprimer
           </button>
         </div>
+        <p v-if="song.comment" class="track__comment">
+          <span class="track__comment-label">Mot du viewer</span>
+          {{ song.comment }}
+        </p>
       </li>
     </ol>
     <p v-else class="song-list__empty">Aucune reco pour le moment. Sois la première personne à en proposer une ♪</p>

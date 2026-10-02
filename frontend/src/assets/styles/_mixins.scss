@@ -10,7 +10,7 @@
   font-family: vars.$font-family;
   font-size: 1rem;
   color: vars.$text-color;
-  background: vars.$surface-color;
+  background: vars.$background-color;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
   &::placeholder {
@@ -21,11 +21,11 @@
   &:focus {
     outline: none;
     border-color: vars.$primary-color;
-    box-shadow: 0 0 0 4px vars.$primary-pale;
+    box-shadow: 0 0 0 4px rgba(183, 156, 242, 0.2);
   }
 
   &:disabled {
-    background: vars.$background-color;
+    background: vars.$surface-raised;
     cursor: not-allowed;
   }
 }
@@ -34,7 +34,8 @@
   background: vars.$surface-color;
   padding: vars.$spacing-medium;
   border-radius: vars.$radius-large;
-  box-shadow: 0 10px 30px rgba(63, 49, 80, 0.08);
+  border: 1px solid vars.$border-color;
+  box-shadow: vars.$shadow;
 }
 
 @mixin button-style {
@@ -47,7 +48,7 @@
   border: none;
   background: vars.$button-gradient;
   box-shadow: 0 5px 0 vars.$button-shadow;
-  color: #fff;
+  color: vars.$button-text;
   font-family: vars.$font-display;
   font-weight: 600;
   font-size: 1rem;
