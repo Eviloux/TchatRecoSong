@@ -91,7 +91,7 @@
   &:first-child {
     border-top: 0;
     // Le n°1 est mis en avant avec le vert « feuillage ».
-    background: linear-gradient(90deg, rgba(159, 211, 154, 0.14), transparent 70%);
+    background: linear-gradient(90deg, vars.$top-track, transparent 70%);
   }
 
   &__rank {
@@ -179,7 +179,7 @@
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: vars.$secondary-color;
+    color: vars.$secondary-strong;
   }
 
   &__actions {

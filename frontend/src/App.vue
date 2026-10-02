@@ -5,11 +5,14 @@
         <span class="app-title__note" aria-hidden="true">♪</span>
         {{ branding.siteName }}
       </RouterLink>
-      <nav class="app-nav" aria-label="Navigation principale">
-        <RouterLink v-for="link in navLinks" :key="link.to" :to="link.to">
-          {{ link.label }}
-        </RouterLink>
-      </nav>
+      <div class="app-header__right">
+        <nav class="app-nav" aria-label="Navigation principale">
+          <RouterLink v-for="link in navLinks" :key="link.to" :to="link.to">
+            {{ link.label }}
+          </RouterLink>
+        </nav>
+        <ThemeToggle />
+      </div>
     </header>
     <main class="app-main">
       <RouterView />
@@ -19,6 +22,7 @@
 
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router';
+import ThemeToggle from './components/ThemeToggle.vue';
 import { branding } from './branding';
 
 const navLinks = [

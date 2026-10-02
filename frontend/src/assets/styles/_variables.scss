@@ -1,38 +1,42 @@
 // src/assets/styles/_variables.scss
-// Palette « Music Océane – Nuit violette » : fonds foncés, accents violet, bleu et vert pastel.
-// Contraste du texte ≥ 6,7:1 sur les cartes (recommandation WCAG : 4,5:1).
+// Les couleurs pointent vers des variables CSS : leurs valeurs dépendent du thème
+// actif (voir _themes.scss) et changent sans recompiler.
 
 $font-display: 'Fredoka', 'Nunito', ui-rounded, system-ui, sans-serif;
 $font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-$background-color: #1a1526; // violet nuit
-$surface-color: #272036; // cartes
-$surface-raised: #332a47; // bulles de commentaire, champs désactivés
-$text-color: #eee8f8;
-$muted-color: #b8accf;
-$border-color: #3d3354;
-$shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+$background-color: var(--c-bg);
+$surface-color: var(--c-surface);
+$surface-raised: var(--c-surface-raised);
+$text-color: var(--c-text);
+$muted-color: var(--c-muted);
+$border-color: var(--c-border);
+$shadow: var(--c-shadow);
 
-$primary-color: #b79cf2; // violet pastel
-$primary-strong: #b79cf2; // texte d'accent (titres, liens actifs)
-$primary-pale: #4a3a72; // fond violet foncé (pastilles, cœurs)
-$primary-hover: #574585;
+$primary-color: var(--c-primary);
+$primary-strong: var(--c-primary-strong);
+$primary-pale: var(--c-primary-pale);
+$primary-hover: var(--c-primary-hover);
 
-$secondary-color: #8ec5f0; // bleu pastel
-$secondary-strong: #8ec5f0;
-$secondary-pale: #24415e;
+$secondary-color: var(--c-secondary);
+$secondary-strong: var(--c-secondary-strong);
+$secondary-pale: var(--c-secondary-pale);
 
-$tertiary-color: #9fd39a; // vert pastel (feuillage)
-$tertiary-strong: #9fd39a;
-$tertiary-pale: #29452d;
+$tertiary-color: var(--c-tertiary);
+$tertiary-strong: var(--c-tertiary-strong);
+$tertiary-pale: var(--c-tertiary-pale);
 
-// Boutons : texte foncé sur dégradé pastel, plus doux qu'un texte blanc sur fond vif.
-$button-gradient: linear-gradient(120deg, $primary-color, $secondary-color);
-$button-text: #1a1526;
-$button-shadow: rgba(0, 0, 0, 0.4);
+$button-gradient: var(--c-button-gradient);
+$button-text: var(--c-button-text);
+$button-shadow: var(--c-button-shadow);
 
-$danger-color: #ffb4ab;
-$danger-pale: #4a2224;
+$danger-color: var(--c-danger);
+$danger-pale: var(--c-danger-pale);
+
+$focus-halo: var(--c-focus-halo);
+$page-halo-1: var(--c-page-halo-1);
+$page-halo-2: var(--c-page-halo-2);
+$top-track: var(--c-top-track);
 
 $spacing: 10px;
 $spacing-small: 12px;
