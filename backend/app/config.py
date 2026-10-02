@@ -74,6 +74,9 @@ ALLOWED_GOOGLE_EMAILS = {v.lower() for v in _split_env(_raw_allowed_google)}
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 
+# Chaîne dont le statut « en live » est affiché sur la page des viewers.
+TWITCH_CHANNEL_LOGIN = (os.getenv("TWITCH_CHANNEL_LOGIN") or "music_oceane").strip().lower()
+
 _raw_allowed_twitch = os.getenv("ALLOWED_TWITCH_LOGINS", "")
 ALLOWED_TWITCH_LOGINS = {v.lower() for v in _split_env(_raw_allowed_twitch)}
 
@@ -153,6 +156,7 @@ def log_environment_configuration() -> None:
 
     _log_env_value("TWITCH_CLIENT_ID", TWITCH_CLIENT_ID)
     logger.info("TWITCH_CLIENT_SECRET défini: %s", bool(TWITCH_CLIENT_SECRET))
+    logger.info("TWITCH_CHANNEL_LOGIN: %s", TWITCH_CHANNEL_LOGIN)
     _log_env_value("ALLOWED_TWITCH_LOGINS", _raw_allowed_twitch)
     _log_collection("ALLOWED_TWITCH_LOGINS", sorted(ALLOWED_TWITCH_LOGINS))
 
