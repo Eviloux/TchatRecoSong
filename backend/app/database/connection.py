@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, Optional
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, make_url
@@ -34,37 +34,10 @@ def _mask_password_fallback(url: str) -> str:
 def _render_url(url_obj: URL, hide_password: bool) -> str:
     """Serialize a SQLAlchemy URL while controlling password masking."""
 
-    try:
-        return url_obj.render_as_string(hide_password=hide_password)
-    except AttributeError:  # pragma: no cover - fallback for older SQLAlchemy
-        legacy_renderer = getattr(url_obj, "__to_string__", None)
-        if callable(legacy_renderer):
-            return legacy_renderer(hide_password=hide_password)
-
-        if hide_password:
-            return str(url_obj)
-
-        # Dernier recours : reconstruction manuelle du DSN sans masquer
-        auth = url_obj.username or ""
-        if url_obj.password:
-            auth = f"{auth}:{url_obj.password}"
-        if auth:
-            auth += "@"
-
-        host = url_obj.host or ""
-        if url_obj.port:
-            host = f"{host}:{url_obj.port}"
-
-        database = f"/{url_obj.database}" if url_obj.database else ""
-        query = ""
-        if url_obj.query:
-            query = "?" + "&".join(f"{k}={v}" for k, v in url_obj.query.items())
-
-        return f"{url_obj.drivername}://{auth}{host}{database}{query}"
+    return url_obj.render_as_string(hide_password=hide_password)
 
 
-
-def _format_url_for_log(url: Optional[str]) -> str:
+def _format_url_for_log(url: str | None) -> str:
     """Mask the password portion of a DSN while keeping it readable."""
 
     if not url:
@@ -78,7 +51,7 @@ def _format_url_for_log(url: Optional[str]) -> str:
     return _render_url(url_obj, hide_password=True)
 
 
-def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
+def _connection_snapshot(url_str: str) -> dict[str, str | None]:
     """Expose les principales infos de connexion sans mot de passe."""
 
     try:
@@ -96,7 +69,7 @@ def _connection_snapshot(url_str: str) -> Dict[str, Optional[str]]:
         "url": _format_url_for_log(url_str),
     }
 
-def _normalize_host(host: Optional[str]) -> Optional[str]:
+def _normalize_host(host: str | None) -> str | None:
     if not host:
         return host
     if "." in host or host in {"localhost", "127.0.0.1"}:
@@ -143,7 +116,7 @@ def _looks_like_template_url(url: str) -> bool:
     return any(token in upper_url for token in PLACEHOLDER_TOKENS_IN_URL)
 
 
-def _normalize_url(raw_url: str) -> Optional[str]:
+def _normalize_url(raw_url: str) -> str | None:
     url = raw_url.strip()
 
     if url.lower().startswith("psql "):
@@ -209,7 +182,7 @@ PLACEHOLDER_SETS = {
 }
 
 
-def _sanitize_part(name: str, value: Optional[str]) -> Optional[str]:
+def _sanitize_part(name: str, value: str | None) -> str | None:
     if not value:
         return None
 
@@ -226,7 +199,7 @@ def _sanitize_part(name: str, value: Optional[str]) -> Optional[str]:
     return stripped
 
 
-def _build_url_from_parts() -> Optional[str]:
+def _build_url_from_parts() -> str | None:
     user = _sanitize_part(
         "user", os.getenv("DATABASE_USER") or os.getenv("POSTGRES_USER")
     )
@@ -333,8 +306,8 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Générateur de sessions DB
 def get_db():
+    """Dépendance FastAPI : une session par requête, toujours fermée."""
     db = SessionLocal()
     try:
         yield db
@@ -342,7 +315,7 @@ def get_db():
         db.close()
 
 
-def describe_active_database() -> Dict[str, Optional[str]]:
+def describe_active_database() -> dict[str, str | None]:
     """Retourne les paramètres de connexion utilisés (mot de passe exclu)."""
 
     snapshot = _connection_snapshot(DATABASE_URL)
@@ -363,10 +336,3 @@ def check_connection() -> None:
         )
         raise
 
-
-if __name__ == "__main__":  # pragma: no cover - utilitaire manuel
-    try:
-        check_connection()
-    except OperationalError:
-        exit(1)
-    print("Connexion PostgreSQL OK")

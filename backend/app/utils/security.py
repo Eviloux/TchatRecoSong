@@ -8,7 +8,6 @@ import hmac
 import secrets
 from typing import Final
 
-
 _PBKDF2_ALGORITHM: Final[str] = "pbkdf2_sha256"
 _PBKDF2_ITERATIONS: Final[int] = 600_000
 _PBKDF2_SALT_BYTES: Final[int] = 16

@@ -1,13 +1,10 @@
-from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy.orm import Session
 
 from app.models.ban_rule import BanRule
 from app.models.song import Song
-
 from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
-
 from app.utils.text import normalize
-
 
 _UNKNOWN_ARTIST_NORMALIZED = normalize("Artiste inconnu")
 
@@ -19,26 +16,24 @@ def _normalized_overlap(value_a: str, value_b: str) -> bool:
 
 
 def _matches_rule_values(title: str | None, artist: str | None, rule: BanRule) -> bool:
-    matches_title = True
-    if rule.title:
-        song_title_norm = normalize(title or "")
-        rule_title_norm = normalize(rule.title)
-        matches_title = bool(rule_title_norm) and bool(song_title_norm) and _normalized_overlap(
-            rule_title_norm, song_title_norm
-        )
+    song_title_norm = normalize(title or "")
+    song_artist_norm = normalize(artist or "")
+    rule_title_norm = normalize(rule.title or "")
+    rule_artist_norm = normalize(rule.artist or "")
 
+    if rule_title_norm and not _normalized_overlap(rule_title_norm, song_title_norm):
+        return False
 
-    matches_artist = True
-    if rule.artist:
-        song_artist_norm = normalize(artist or "")
-        rule_artist_norm = normalize(rule.artist)
+    if not rule_artist_norm:
+        return True
 
-        if not song_artist_norm or song_artist_norm == _UNKNOWN_ARTIST_NORMALIZED:
-            matches_artist = False
-        else:
-            matches_artist = _normalized_overlap(rule_artist_norm, song_artist_norm)
+    if song_artist_norm and song_artist_norm != _UNKNOWN_ARTIST_NORMALIZED:
+        return _normalized_overlap(rule_artist_norm, song_artist_norm)
 
-    return matches_title and matches_artist
+    # Artiste inconnu (métadonnées Spotify incomplètes) : on ne peut pas vérifier
+    # l'artiste, donc on exige un titre *identique* pour bannir. Ni contournement
+    # facile de la règle, ni faux positifs sur un titre partiel.
+    return bool(rule_title_norm) and rule_title_norm == song_title_norm
 
 
 def _matches_rule(song: Song, rule: BanRule) -> bool:
@@ -54,11 +49,7 @@ def _apply_rule_to_existing_songs(db: Session, rule: BanRule) -> None:
         )
         return
 
-    candidates = db.query(Song).all()
-    ids_to_delete: list[int] = []
-    for song in candidates:
-        if _matches_rule(song, rule):
-            ids_to_delete.append(song.id)
+    ids_to_delete = [song.id for song in db.query(Song).all() if _matches_rule(song, rule)]
 
     if ids_to_delete:
         (
@@ -109,21 +100,15 @@ def delete_ban_rule(db: Session, rule_id: int) -> bool:
 def list_ban_rules(db: Session):
     return db.query(BanRule).order_by(BanRule.id.desc()).all()
 
+
 def is_banned(db: Session, title: str | None, artist: str | None, link: str | None):
-    if link:
-        normalized_link = link.strip()
-        if normalized_link:
-            if db.query(BanRule).filter(BanRule.link == normalized_link).first():
-                return True
+    normalized_link = (link or "").strip()
+    if normalized_link and db.query(BanRule).filter(BanRule.link == normalized_link).first():
+        return True
 
     candidate_rules = (
         db.query(BanRule)
         .filter(or_(BanRule.title.isnot(None), BanRule.artist.isnot(None)))
         .all()
     )
-
-    for rule in candidate_rules:
-        if _matches_rule_values(title, artist, rule):
-            return True
-
-    return False
+    return any(_matches_rule_values(title, artist, rule) for rule in candidate_rules)

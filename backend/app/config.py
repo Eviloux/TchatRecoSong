@@ -1,16 +1,16 @@
 import logging
 import os
+import secrets
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from dotenv import load_dotenv
+
+from app.utils.security import hash_password
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-
-from app.utils.security import hash_password
 
 
 def _parse_bool(value: str | None, default: bool) -> bool:
@@ -30,24 +30,8 @@ def _split_env(value: str) -> list[str]:
     return sanitized
 
 
-def _mask_secret(value: str | None, keep: int = 4) -> str | None:
-    if not value:
-        return value
-    if len(value) <= keep:
-        return "*" * len(value)
-    return value[:keep] + "*" * (len(value) - keep)
-
-
-def _format_env_value(value: str | None, mask: bool = False) -> str:
-    if value is None:
-        return "<non défini>"
-    if mask:
-        return _mask_secret(value) or "<non défini>"
-    return value
-
-
-def _log_env_value(name: str, value: str | None, mask: bool = False) -> None:
-    logger.info("%s (env): %s", name, _format_env_value(value, mask=mask))
+def _log_env_value(name: str, value: str | None) -> None:
+    logger.info("%s (env): %s", name, "<non défini>" if value is None else value)
 
 
 def _log_collection(name: str, values: Iterable[str]) -> None:
@@ -68,14 +52,16 @@ CORS_ORIGINS = _split_env(_effective_cors)
 
 # Authentification administrateur
 _raw_admin_secret = os.getenv("ADMIN_JWT_SECRET")
-if not _raw_admin_secret:
-    import warnings
-    warnings.warn(
-        "ADMIN_JWT_SECRET non défini ! Utilisation d'un secret par défaut. "
-        "Définir cette variable d'environnement en production.",
-        stacklevel=1,
+if _raw_admin_secret and len(_raw_admin_secret) >= 32:
+    ADMIN_JWT_SECRET = _raw_admin_secret
+else:
+    # Jamais de secret par défaut connu : un secret public permettrait de forger
+    # des jetons admin. Un secret aléatoire invalide les sessions à chaque redémarrage.
+    logger.warning(
+        "ADMIN_JWT_SECRET absent ou trop court (< 32 caractères) : secret aléatoire "
+        "généré, les sessions admin seront perdues à chaque redémarrage."
     )
-ADMIN_JWT_SECRET = _raw_admin_secret or "super-secret-change-me"
+    ADMIN_JWT_SECRET = secrets.token_urlsafe(64)
 
 _raw_admin_ttl = os.getenv("ADMIN_TOKEN_TTL_MINUTES")
 ADMIN_TOKEN_TTL_MINUTES = int(_raw_admin_ttl or "720")
@@ -83,7 +69,7 @@ ADMIN_TOKEN_TTL_MINUTES = int(_raw_admin_ttl or "720")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 _raw_allowed_google = os.getenv("ALLOWED_GOOGLE_EMAILS", "")
-ALLOWED_GOOGLE_EMAILS = set(_split_env(_raw_allowed_google))
+ALLOWED_GOOGLE_EMAILS = {v.lower() for v in _split_env(_raw_allowed_google)}
 
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
@@ -103,19 +89,20 @@ ADMIN_DEFAULT_NAME = (_raw_default_name or "Admin local").strip() or ADMIN_DEFAU
 _raw_default_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
 _raw_default_password_hash = os.getenv("ADMIN_DEFAULT_PASSWORD_HASH")
 
-_DEFAULT_PASSWORD_SALT = bytes.fromhex("4f8d3b57a9c3e2f1b6d4c7a8f0e1b2c3")
-_FALLBACK_PASSWORD = "recoadmin"
-_fallback_password_hash = hash_password(_FALLBACK_PASSWORD, salt=_DEFAULT_PASSWORD_SALT)
-
+# Aucun compte n'est créé sans mot de passe explicite (plus de valeur par défaut).
 if _raw_default_password_hash and _raw_default_password_hash.strip():
-    ADMIN_DEFAULT_PASSWORD_HASH = _raw_default_password_hash.strip()
-    _password_hash_source = "ADMIN_DEFAULT_PASSWORD_HASH"
+    ADMIN_DEFAULT_PASSWORD_HASH: str | None = _raw_default_password_hash.strip()
 elif _raw_default_password:
     ADMIN_DEFAULT_PASSWORD_HASH = hash_password(_raw_default_password)
-    _password_hash_source = "ADMIN_DEFAULT_PASSWORD"
 else:
-    ADMIN_DEFAULT_PASSWORD_HASH = _fallback_password_hash
-    _password_hash_source = "valeur par défaut"
+    ADMIN_DEFAULT_PASSWORD_HASH = None
+
+# Ancien mot de passe par défaut, publié dans le dépôt : tout compte qui l'utilise
+# encore est désactivé au démarrage.
+LEGACY_DEFAULT_PASSWORD = "recoadmin"
+
+# Nombre de proxys de confiance (Render = 1) pour retrouver l'IP réelle du client.
+TRUSTED_PROXY_COUNT = max(int(os.getenv("TRUSTED_PROXY_COUNT", "1")), 0)
 
 
 # Frontend build (SPA)
@@ -153,12 +140,7 @@ def log_environment_configuration() -> None:
         )
     _log_collection("CORS_ORIGINS", CORS_ORIGINS)
 
-    _log_env_value("ADMIN_JWT_SECRET", _raw_admin_secret, mask=True)
-    if _raw_admin_secret is None:
-        logger.info(
-            "ADMIN_JWT_SECRET non définie, utilisation de la valeur par défaut: %s",
-            _mask_secret(ADMIN_JWT_SECRET),
-        )
+    logger.info("ADMIN_JWT_SECRET défini: %s", bool(_raw_admin_secret))
 
     _log_env_value("ADMIN_TOKEN_TTL_MINUTES", _raw_admin_ttl)
     if _raw_admin_ttl is None:
@@ -170,7 +152,7 @@ def log_environment_configuration() -> None:
     _log_collection("ALLOWED_GOOGLE_EMAILS", sorted(ALLOWED_GOOGLE_EMAILS))
 
     _log_env_value("TWITCH_CLIENT_ID", TWITCH_CLIENT_ID)
-    _log_env_value("TWITCH_CLIENT_SECRET", TWITCH_CLIENT_SECRET, mask=True)
+    logger.info("TWITCH_CLIENT_SECRET défini: %s", bool(TWITCH_CLIENT_SECRET))
     _log_env_value("ALLOWED_TWITCH_LOGINS", _raw_allowed_twitch)
     _log_collection("ALLOWED_TWITCH_LOGINS", sorted(ALLOWED_TWITCH_LOGINS))
 
@@ -186,15 +168,11 @@ def log_environment_configuration() -> None:
     _log_env_value("ADMIN_DEFAULT_NAME", _raw_default_name)
     logger.info("ADMIN_DEFAULT_NAME interprétée: %s", ADMIN_DEFAULT_NAME)
 
-    if _raw_default_password_hash:
-        _log_env_value("ADMIN_DEFAULT_PASSWORD_HASH", _raw_default_password_hash)
-    if _raw_default_password:
-        _log_env_value("ADMIN_DEFAULT_PASSWORD", "<fournie>", mask=True)
     logger.info(
-        "ADMIN_DEFAULT_PASSWORD_HASH utilisée (%s)",
-        _password_hash_source,
+        "Mot de passe du compte admin par défaut fourni: %s",
+        ADMIN_DEFAULT_PASSWORD_HASH is not None,
     )
-
+    logger.info("TRUSTED_PROXY_COUNT: %s", TRUSTED_PROXY_COUNT)
 
     _log_env_value("FRONTEND_DIST_PATH", _raw_frontend_dist)
     logger.info("FRONTEND_DIST_PATH résolue: %s", FRONTEND_DIST_PATH)

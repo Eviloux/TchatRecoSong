@@ -1,25 +1,12 @@
-import os
-import sys
-from pathlib import Path
-
-BACKEND_ROOT = Path(__file__).resolve().parents[1]
-if str(BACKEND_ROOT) not in sys.path:
-    sys.path.insert(0, str(BACKEND_ROOT))
-
-os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
-
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
-import pytest
 
 from app.crud import ban_rule as ban_crud
 from app.crud import song as song_crud
 from app.database.connection import Base
 from app.models.song import Song
-
 from app.schemas.ban_rule import BanRuleCreate, BanRuleUpdate
-
 from app.schemas.song import SongCreate
 
 

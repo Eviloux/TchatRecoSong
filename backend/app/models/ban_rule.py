@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String
+
 from app.database.connection import Base
+
 
 class BanRule(Base):
     __tablename__ = "ban_rules"

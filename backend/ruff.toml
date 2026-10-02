@@ -1,0 +1,11 @@
+target-version = "py311"
+line-length = 110
+
+[lint]
+# F: erreurs (imports/variables inutilisés), E9: syntaxe, B: bugs courants,
+# UP: syntaxe moderne, I: tri des imports.
+select = ["F", "E9", "B", "UP", "I"]
+ignore = ["B008"]  # Depends() en valeur par défaut : idiome FastAPI
+
+[lint.isort]
+known-first-party = ["app", "tests"]

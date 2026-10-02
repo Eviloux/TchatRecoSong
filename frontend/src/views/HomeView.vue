@@ -58,52 +58,73 @@ const songListRef = ref<SongListInstance | null>(null);
 let availabilityTimer: ReturnType<typeof window.setInterval> | undefined;
 const backendWaitMessage = 'Veuillez attendre que le backend soit démarré.';
 
-const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i;
+const YOUTUBE_REGEX = /^(https?:\/\/)?((www|m)\.)?(youtube\.com|youtu\.be)\//i;
 const SPOTIFY_REGEX = /^(https?:\/\/)?(open\.)?spotify\.com\//i;
 
-const markBackendUnavailable = () => {
-  backendReady.value = false;
-};
+const HEALTH_POLL_INTERVAL_MS = 5000;
+const HEALTH_TIMEOUT_MS = 8000;
+let healthCheckInFlight = false;
 
-const checkBackendAvailability = async () => {
-  if (!API_URL) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/health`, { method: 'GET', cache: 'no-store' });
-    if (response.ok) {
-      backendReady.value = true;
-      if (feedbackType.value === 'error' && feedback.value === backendWaitMessage) {
-        feedback.value = '';
-        feedbackType.value = '';
-      }
-      return;
-    }
-
-    markBackendUnavailable();
-  } catch (error) {
-    console.error('Backend indisponible', error);
-    markBackendUnavailable();
-  }
-};
-
-onMounted(() => {
-  if (!API_URL) {
-    return;
-  }
-
-  markBackendUnavailable();
-  checkBackendAvailability();
-  availabilityTimer = window.setInterval(checkBackendAvailability, 5000);
-});
-
-onBeforeUnmount(() => {
+const stopAvailabilityPolling = () => {
   if (availabilityTimer) {
     window.clearInterval(availabilityTimer);
     availabilityTimer = undefined;
   }
-});
+};
+
+const checkBackendAvailability = async () => {
+  // Évite d'empiler les requêtes pendant le réveil (lent) du backend Render.
+  if (!API_URL || healthCheckInFlight) {
+    return;
+  }
+
+  healthCheckInFlight = true;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${API_URL}/health`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (response.ok) {
+      const wasUnavailable = !backendReady.value;
+      backendReady.value = true;
+      stopAvailabilityPolling();
+      if (feedbackType.value === 'error' && feedback.value === backendWaitMessage) {
+        feedback.value = '';
+        feedbackType.value = '';
+      }
+      // La liste a pu être chargée (en vain) pendant que le backend dormait.
+      if (wasUnavailable && songListRef.value) {
+        await songListRef.value.refresh();
+      }
+      return;
+    }
+
+    backendReady.value = false;
+  } catch (error) {
+    console.warn('Backend injoignable, nouvelle tentative dans quelques secondes.', error);
+    backendReady.value = false;
+  } finally {
+    window.clearTimeout(timeout);
+    healthCheckInFlight = false;
+  }
+};
+
+const startAvailabilityPolling = () => {
+  if (!API_URL || availabilityTimer) {
+    return;
+  }
+  backendReady.value = false;
+  checkBackendAvailability();
+  availabilityTimer = window.setInterval(checkBackendAvailability, HEALTH_POLL_INTERVAL_MS);
+};
+
+onMounted(startAvailabilityPolling);
+
+onBeforeUnmount(stopAvailabilityPolling);
 
 const submit = async () => {
   if (!API_URL) {
@@ -152,8 +173,9 @@ const submit = async () => {
   } catch (error: any) {
     console.error(error);
     if (error instanceof TypeError) {
+      // Erreur réseau : on revérifie la disponibilité au lieu de bloquer le formulaire.
       feedback.value = backendWaitMessage;
-      markBackendUnavailable();
+      startAvailabilityPolling();
     } else {
       feedback.value = error.message ?? "Impossible d'enregistrer la chanson.";
     }

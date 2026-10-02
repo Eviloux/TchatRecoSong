@@ -1,7 +1,7 @@
 import { createServer } from 'http';
-import { extname, join, dirname, resolve } from 'path';
 import { createReadStream } from 'fs';
-import { access, stat } from 'fs/promises';
+import { stat } from 'fs/promises';
+import { dirname, extname, join, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,117 +26,94 @@ const MIME_TYPES = {
   '.ttf': 'font/ttf',
 };
 
-function getContentType(filePath) {
-  return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream';
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
+function sendText(res, status, body) {
+  res.writeHead(status, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end(body);
 }
 
-function setCommonHeaders(res) {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-}
-
-function sendFile(req, res, filePath, status = 200) {
-  res.statusCode = status;
-  res.setHeader('Content-Type', getContentType(filePath));
-  setCommonHeaders(res);
+function sendFile(req, res, filePath) {
+  const isHashedAsset = filePath.startsWith(join(distDir, 'assets') + sep);
+  res.writeHead(200, {
+    ...SECURITY_HEADERS,
+    'Content-Type': MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+    // index.html doit toujours être revalidé, sinon les navigateurs gardent un
+    // ancien bundle après un déploiement ; les assets hashés, eux, sont immuables.
+    'Cache-Control': isHashedAsset ? 'public, max-age=31536000, immutable' : 'no-cache',
+  });
 
   if (req.method === 'HEAD') {
     res.end();
     return;
   }
-  createReadStream(filePath).pipe(res);
+  createReadStream(filePath)
+    .on('error', () => res.destroy())
+    .pipe(res);
 }
 
-async function fileExists(filePath) {
+async function isFile(filePath) {
   try {
-    await access(filePath);
-    return true;
+    return (await stat(filePath)).isFile();
   } catch {
     return false;
   }
 }
 
-function wantsSpaFallback(pathname, req) {
-  if (pathname === '/' || pathname === '') {
-    return true;
+async function handle(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    sendText(res, 405, 'Method Not Allowed');
+    return;
   }
 
-  const hasExtension = extname(pathname) !== '';
-  if (hasExtension) {
-    return false;
+  let pathname;
+  try {
+    pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
+  } catch {
+    // URL mal encodée (ex. /%E0) : sans ce garde-fou, l'exception tuait le serveur.
+    sendText(res, 400, 'Bad Request');
+    return;
   }
 
-  const acceptHeader = req.headers['accept'];
-  if (acceptHeader && acceptHeader.includes('text/html')) {
-    return true;
+  // Routes de la SPA (sans extension) : toujours index.html, le routeur Vue décide.
+  if (extname(pathname) === '') {
+    sendFile(req, res, indexPath);
+    return;
   }
 
-  return true;
+  const candidatePath = resolve(distDir, `.${pathname}`);
+  // Le séparateur final empêche aussi d'atteindre un dossier voisin comme `dist-old/`.
+  if (!candidatePath.startsWith(distDir + sep)) {
+    sendText(res, 403, 'Forbidden');
+    return;
+  }
+
+  if (await isFile(candidatePath)) {
+    sendFile(req, res, candidatePath);
+    return;
+  }
+
+  sendText(res, 404, 'Not Found');
 }
 
-const server = createServer(async (req, res) => {
-  if (!req.url) {
-    res.statusCode = 400;
-    res.end('Bad Request');
-    return;
-  }
-
-  const requestUrl = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-  let pathname = decodeURIComponent(requestUrl.pathname);
-
-  const methodAllowsSpaFallback = req.method === 'GET' || req.method === 'HEAD';
-
-  if (methodAllowsSpaFallback) {
-    const looksLikeStaticAsset = extname(pathname) !== '';
-    if (!looksLikeStaticAsset) {
-      sendFile(req, res, indexPath);
-      return;
+const server = createServer((req, res) => {
+  handle(req, res).catch((error) => {
+    console.error('Erreur inattendue du serveur front', error);
+    if (!res.headersSent) {
+      sendText(res, 500, 'Internal Server Error');
+    } else {
+      res.destroy();
     }
-  }
-
-
-  // Prevent path traversal and normalise the request path relative to the dist directory
-  const sanitizedPath = pathname.replace(/\.\.+/g, '.').replace(/^\/+/, '');
-  const candidatePath = resolve(distDir, sanitizedPath);
-
-  if (!candidatePath.startsWith(distDir)) {
-    res.statusCode = 403;
-    setCommonHeaders(res);
-    res.end('Forbidden');
-    return;
-  }
-
-  try {
-    const stats = await stat(candidatePath);
-
-    if (stats.isFile()) {
-      sendFile(req, res, candidatePath);
-      return;
-    }
-
-    if (stats.isDirectory()) {
-      const nestedIndex = join(candidatePath, 'index.html');
-      if (await fileExists(nestedIndex)) {
-        sendFile(req, res, nestedIndex);
-        return;
-      }
-    }
-  } catch (error) {
-    if (!wantsSpaFallback(sanitizedPath, req)) {
-      res.statusCode = 404;
-      setCommonHeaders(res);
-      res.end('Not Found');
-      return;
-    }
-
-  }
-
-  sendFile(req, res, indexPath);
+  });
 });
 
 const port = Number(process.env.PORT ?? 4173);
 server.listen(port, '0.0.0.0', () => {
   console.log(`Viewer portal running at http://0.0.0.0:${port}`);
 });
-
