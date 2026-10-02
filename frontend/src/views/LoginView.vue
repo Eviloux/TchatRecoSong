@@ -53,9 +53,8 @@
         {{ twitchLoginLoading ? 'Connexion Twitch…' : 'Se connecter avec Twitch' }}
       </button>
 
-      <p class="login-hint">
-        L'identifiant OAuth est récupéré automatiquement auprès de l'API. Utilisez vos identifiants locaux si le bouton
-        n'apparaît pas.
+      <p v-if="configLoading" class="login-hint" role="status">
+        Le serveur se réveille, les options de connexion arrivent…
       </p>
     </div>
   </section>
@@ -64,7 +63,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getApiUrl } from '../utils/api';
+import { fetchWithTimeout, getApiUrl } from '../utils/api';
 import {
   ensureValidStoredAdminSession,
   loadStoredAdminSession,
@@ -120,7 +119,8 @@ const isBackendUnavailableError = (err: unknown) => {
   if (!err) {
     return false;
   }
-  if (err instanceof TypeError) {
+  // TypeError : réseau/CORS ; AbortError : délai de fetchWithTimeout dépassé.
+  if (err instanceof TypeError || (err instanceof DOMException && err.name === 'AbortError')) {
     return true;
   }
   if (err instanceof Error) {
@@ -137,11 +137,11 @@ const callGoogleAuthEndpoint = async (payload: Record<string, string>) => {
   }
   try {
     error.value = '';
-    const response = await fetch(`${API_URL}/auth/google`, {
+    const response = await fetchWithTimeout(`${API_URL}/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+    }, 20_000);
     if (!response.ok) {
       if (response.status === 403) {
         throw new Error("Votre utilisateur n'est pas dans la whitelist.");
@@ -227,11 +227,11 @@ const handleTwitchCallback = async (code: string) => {
   twitchLoginLoading.value = true;
   try {
     error.value = '';
-    const response = await fetch(`${API_URL}/auth/twitch`, {
+    const response = await fetchWithTimeout(`${API_URL}/auth/twitch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, redirect_uri: twitchRedirectUri }),
-    });
+    }, 20_000);
     if (!response.ok) {
       if (response.status === 403) {
         throw new Error("Ce compte Twitch n'est pas autorisé à accéder à l'administration.");
@@ -253,11 +253,21 @@ const handleTwitchCallback = async (code: string) => {
   }
 };
 
-const fetchAuthConfig = async () => {
-  if (!API_URL) return;
+const configLoading = ref(true);
+const CONFIG_RETRY_DELAY_MS = 3000;
+const CONFIG_MAX_ATTEMPTS = 20; // ~1 min : durée typique d'un réveil Render
+let configRetryTimer: number | undefined;
+
+// Récupère les identifiants OAuth publics. Pendant le réveil du backend on
+// réessaie en arrière-plan, sans jamais bloquer l'affichage de la page.
+const fetchAuthConfig = async (attempt = 1): Promise<void> => {
+  if (!API_URL) {
+    configLoading.value = false;
+    return;
+  }
   try {
-    const response = await fetch(`${API_URL}/auth/config`);
-    if (!response.ok) return;
+    const response = await fetchWithTimeout(`${API_URL}/auth/config`, {}, 8000);
+    if (!response.ok) throw new Error(`Statut ${response.status}`);
     const data = await response.json();
     if (data.google_client_id) {
       googleClientId.value = data.google_client_id;
@@ -268,8 +278,15 @@ const fetchAuthConfig = async () => {
     if (typeof data.password_login_enabled === 'boolean') {
       passwordLoginEnabled.value = data.password_login_enabled;
     }
+    configLoading.value = false;
   } catch (err) {
-    console.error('Impossible de récupérer la configuration auth', err);
+    if (attempt >= CONFIG_MAX_ATTEMPTS) {
+      console.error('Impossible de récupérer la configuration auth', err);
+      configLoading.value = false;
+      error.value = backendUnavailableMessage;
+      return;
+    }
+    configRetryTimer = window.setTimeout(() => fetchAuthConfig(attempt + 1), CONFIG_RETRY_DELAY_MS);
   }
 };
 
@@ -288,11 +305,11 @@ const submitEmailLogin = async () => {
   emailLoginLoading.value = true;
   try {
     error.value = '';
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await fetchWithTimeout(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: trimmedEmail, password: password.value }),
-    });
+    }, 20_000);
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 404) {
@@ -324,48 +341,51 @@ watch(googleClientId, () => {
 });
 
 onMounted(async () => {
-  await fetchAuthConfig();
+  // En parallèle : la page ne doit jamais attendre la config pour s'afficher.
+  fetchAuthConfig();
 
-  // Handle Twitch authorization code callback: ?code=...
-  const twitchCode = route.query.code;
-  if (typeof twitchCode === 'string' && twitchCode) {
-    // Remove the code from the URL immediately so a page refresh won't
-    // attempt to exchange the same (now expired) authorization code.
-    const cleanQuery = { ...route.query };
-    delete cleanQuery.code;
-    delete cleanQuery.scope;
-    await router.replace({ path: route.path, query: cleanQuery });
+  try {
+    // Retour de Twitch : ?code=...
+    const twitchCode = route.query.code;
+    if (typeof twitchCode === 'string' && twitchCode) {
+      // Retirer le code de l'URL tout de suite : il n'est utilisable qu'une fois.
+      const cleanQuery = { ...route.query };
+      delete cleanQuery.code;
+      delete cleanQuery.scope;
+      await router.replace({ path: route.path, query: cleanQuery });
 
+      ready.value = true;
+      await handleTwitchCallback(twitchCode);
+    }
+
+    if (token.value) {
+      const validation = await ensureValidStoredAdminSession();
+      if (validation.status === 'valid') {
+        await storeSession(
+          validation.token,
+          validation.profile.provider,
+          validation.profile.name,
+          validation.profile.subject,
+        );
+        return;
+      }
+      token.value = null;
+      if (validation.status === 'error') {
+        error.value = 'Impossible de vérifier la session administrateur.';
+        console.warn('Erreur lors de la validation préalable de la session admin', validation.error);
+      }
+    }
+  } finally {
+    // Quoi qu'il arrive (erreur, navigation annulée…), la page sort de l'état
+    // « Vérification… » : c'était la cause de la page bloquée.
     ready.value = true;
-    await handleTwitchCallback(twitchCode);
-    // Do NOT return here – fall through so the Google button is initialised
-    // even when the Twitch callback fails.
+    ensureGoogleButton();
+    scheduleGoogleInitRetry();
   }
-
-  if (token.value) {
-    const validation = await ensureValidStoredAdminSession();
-    if (validation.status === 'valid') {
-      await storeSession(
-        validation.token,
-        validation.profile.provider,
-        validation.profile.name,
-        validation.profile.subject,
-      );
-      return;
-    }
-    token.value = null;
-    if (validation.status === 'error') {
-      error.value = 'Impossible de vérifier la session administrateur.';
-      console.warn('Erreur lors de la validation préalable de la session admin', validation.error);
-    }
-  }
-
-  ready.value = true;
-  ensureGoogleButton();
-  scheduleGoogleInitRetry();
 });
 
 onBeforeUnmount(() => {
+  window.clearTimeout(configRetryTimer);
   if (googleInitTimer !== null) {
     window.clearInterval(googleInitTimer);
     googleInitTimer = null;

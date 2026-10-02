@@ -22,15 +22,17 @@ router.beforeEach(async (to) => {
     }
 
     const validation = await ensureValidStoredAdminSession({ force: true });
-    if (validation.status === 'valid') {
-      return true;
+    if (validation.status === 'invalid') {
+      return { name: 'login', query: { redirect: to.fullPath } };
     }
 
+    // Erreur réseau (backend qui se réveille) : on garde le jeton et on laisse
+    // AdminView afficher l'erreur. Renvoyer vers /login créait une boucle
+    // /admin → /login → /admin qui laissait la page de connexion bloquée.
     if (validation.status === 'error') {
       console.warn('Impossible de valider la session admin avant navigation vers /admin');
     }
-
-    return { name: 'login', query: { redirect: to.fullPath } };
+    return true;
   }
 
   if (to.name === 'login') {

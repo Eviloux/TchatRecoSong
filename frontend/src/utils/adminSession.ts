@@ -1,4 +1,4 @@
-import { getApiUrl } from './api';
+import { fetchWithTimeout, getApiUrl } from './api';
 
 export interface AdminProfile {
   name: string;
@@ -87,7 +87,7 @@ async function requestSessionValidation(token: string): Promise<AdminSessionVali
   }
 
   try {
-    const response = await fetch(`${apiUrl}/auth/session`, {
+    const response = await fetchWithTimeout(`${apiUrl}/auth/session`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
