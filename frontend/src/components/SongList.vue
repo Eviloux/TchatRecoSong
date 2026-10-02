@@ -163,6 +163,13 @@ const fetchSongs = async () => {
 
 const hasVoted = (songId: number) => votedSongs.value.has(songId);
 
+// Soumettre une chanson compte déjà comme un vote côté serveur : on la marque
+// comme votée pour que ce viewer ne puisse pas ajouter un 2e vote avec le cœur.
+const markAsVoted = (songId: number) => {
+  votedSongs.value.add(songId);
+  persistVotes();
+};
+
 const vote = async (songId: number) => {
   if (!API_URL || !isVotingEnabled.value || hasVoted(songId) || voting.value === songId) return;
   voting.value = songId;
@@ -174,8 +181,7 @@ const vote = async (songId: number) => {
     const updated: Song = await response.json();
     // Le tri est assuré par `sortedSongs`.
     songs.value = songs.value.map((song) => (song.id === songId ? { ...song, votes: updated.votes } : song));
-    votedSongs.value.add(songId);
-    persistVotes();
+    markAsVoted(songId);
   } catch (error) {
     console.error('Impossible de voter pour cette chanson', error);
   } finally {
@@ -214,5 +220,6 @@ onMounted(() => {
 defineExpose({
   refresh: fetchSongs,
   hasVoted,
+  markAsVoted,
 });
 </script>
