@@ -1,11 +1,15 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-pydantic
-python-dotenv
-python-multipart
-httpx
-slowapi
-PyJWT
-cryptography
+# Versions figées sur une version testée : `~=X.Y.Z` n'accepte que les correctifs
+# (X.Y.*). Un `pip install` non figé a déjà cassé un déploiement (SQLAlchemy 2.1
+# a changé le pilote PostgreSQL par défaut).
+fastapi~=0.142.2
+uvicorn[standard]~=0.50.2
+sqlalchemy~=2.1.1
+# Pilote par défaut de SQLAlchemy 2.1 pour les URL postgresql://
+psycopg[binary]~=3.3.6
+pydantic~=2.13.4
+python-dotenv~=1.2.2
+python-multipart~=0.0.32
+httpx~=0.28.1
+slowapi~=0.1.10
+PyJWT~=2.13.0
+cryptography~=49.0.0
