@@ -2,6 +2,7 @@
 
 @use 'variables' as *;
 @use 'mixins' as *;
+@use 'themes';
 @use 'songlist' as *;
 @use 'adminpanel' as *;
 
@@ -11,11 +12,6 @@
   box-sizing: border-box;
 }
 
-:root {
-  // Formulaires, barres de défilement et autocomplétion natives en sombre.
-  color-scheme: dark;
-}
-
 body {
   margin: 0;
   min-height: 100vh;
@@ -23,8 +19,8 @@ body {
   line-height: 1.5;
   color: $text-color;
   background:
-    radial-gradient(circle at 10% 0%, rgba(183, 156, 242, 0.16), transparent 45%),
-    radial-gradient(circle at 95% 10%, rgba(142, 197, 240, 0.1), transparent 40%),
+    radial-gradient(circle at 10% 0%, $page-halo-1, transparent 45%),
+    radial-gradient(circle at 95% 10%, $page-halo-2, transparent 40%),
     $background-color;
 }
 
@@ -73,6 +69,12 @@ input {
     }
   }
 
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
   .app-nav {
     display: flex;
     gap: $spacing-medium;
@@ -97,6 +99,60 @@ input {
   max-width: 1040px;
   margin: 0 auto;
   padding: 0 $spacing-large $spacing-large;
+}
+
+// ---------- Interrupteur de thème (soleil / lune) ----------
+.theme-toggle {
+  --toggle-width: 64px;
+  --toggle-height: 32px;
+  --knob-size: 24px;
+  position: relative;
+  flex: none;
+  width: var(--toggle-width);
+  height: var(--toggle-height);
+  padding: 0;
+  border: 2px solid $border-color;
+  border-radius: $radius-pill;
+  background: $surface-color;
+  cursor: pointer;
+
+  &__icons {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 7px;
+    font-size: 0.9rem;
+    color: $muted-color;
+  }
+
+  &__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: var(--knob-size);
+    height: var(--knob-size);
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: $button-gradient;
+    color: $button-text;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: transform 0.25s ease;
+  }
+
+  &.is-light &__knob {
+    // Largeur interne (bordures déduites) moins le bouton et ses marges.
+    transform: translateX(calc(var(--toggle-width) - 4px - var(--knob-size) - 4px));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__knob {
+      transition: none;
+    }
+  }
 }
 
 // ---------- Composants partagés ----------
@@ -431,6 +487,26 @@ input {
 @media (max-width: 760px) {
   .app-header {
     padding: 12px 16px;
+
+    &__right {
+      gap: 12px;
+    }
+  }
+
+  // Version compacte de l'interrupteur sur mobile.
+  .theme-toggle {
+    --toggle-width: 48px;
+    --toggle-height: 26px;
+    --knob-size: 18px;
+
+    &__icons {
+      padding: 0 5px;
+      font-size: 0.7rem;
+    }
+
+    &__knob {
+      font-size: 0.62rem;
+    }
   }
 
   .app-main {

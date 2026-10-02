@@ -1,0 +1,83 @@
+// src/assets/styles/_themes.scss
+// Deux thèmes : « Nuit violette » (sombre) et « Lilas » (clair).
+// Texte ≥ 6,7:1 sur les cartes en sombre, ≥ 4,6:1 sur les boutons en clair.
+
+@mixin theme-dark {
+  color-scheme: dark;
+  --c-bg: #1a1526;
+  --c-surface: #272036;
+  --c-surface-raised: #332a47;
+  --c-text: #eee8f8;
+  --c-muted: #b8accf;
+  --c-border: #3d3354;
+  --c-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+  --c-primary: #b79cf2;
+  --c-primary-strong: #b79cf2;
+  --c-primary-pale: #4a3a72;
+  --c-primary-hover: #574585;
+  --c-secondary: #8ec5f0;
+  --c-secondary-strong: #8ec5f0;
+  --c-secondary-pale: #24415e;
+  --c-tertiary: #9fd39a;
+  --c-tertiary-strong: #9fd39a;
+  --c-tertiary-pale: #29452d;
+  --c-button-gradient: linear-gradient(120deg, #b79cf2, #8ec5f0);
+  --c-button-text: #1a1526;
+  --c-button-shadow: rgba(0, 0, 0, 0.4);
+  --c-danger: #ffb4ab;
+  --c-danger-pale: #4a2224;
+  --c-focus-halo: rgba(183, 156, 242, 0.2);
+  --c-page-halo-1: rgba(183, 156, 242, 0.16);
+  --c-page-halo-2: rgba(142, 197, 240, 0.1);
+  --c-top-track: rgba(159, 211, 154, 0.14);
+}
+
+@mixin theme-light {
+  color-scheme: light;
+  --c-bg: #f8f6fd;
+  --c-surface: #ffffff;
+  --c-surface-raised: #f1ebfc;
+  --c-text: #3f3150;
+  --c-muted: #6f6283;
+  --c-border: #e4dcf5;
+  --c-shadow: 0 10px 30px rgba(63, 49, 80, 0.08);
+  --c-primary: #9d7bea;
+  --c-primary-strong: #5b2bb5;
+  --c-primary-pale: #eee6fd;
+  --c-primary-hover: #e3d6fb;
+  --c-secondary: #9cc9f0;
+  --c-secondary-strong: #1f5f95;
+  --c-secondary-pale: #e3f1fc;
+  --c-tertiary: #a8cf8e;
+  --c-tertiary-strong: #3f6b2a;
+  --c-tertiary-pale: #eaf5e1;
+  --c-button-gradient: linear-gradient(120deg, #7048c2, #6a5acd 55%, #5b6fc4);
+  --c-button-text: #ffffff;
+  --c-button-shadow: #48309a;
+  --c-danger: #b3261e;
+  --c-danger-pale: #ffe3e0;
+  --c-focus-halo: rgba(157, 123, 234, 0.25);
+  --c-page-halo-1: rgba(157, 123, 234, 0.14);
+  --c-page-halo-2: rgba(156, 201, 240, 0.18);
+  --c-top-track: #eaf5e1;
+}
+
+// Sans choix explicite (ou sans JavaScript), on suit le réglage de l'appareil ;
+// le sombre reste la valeur par défaut.
+:root {
+  @include theme-dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    @include theme-light;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include theme-dark;
+}
+
+:root[data-theme='light'] {
+  @include theme-light;
+}

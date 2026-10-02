@@ -4,7 +4,22 @@
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#1A1526">
+    <meta name="theme-color" content="#1a1526">
+    <script>
+      // Applique le thème avant le premier affichage pour éviter un flash de
+      // l'autre thème. Clé synchronisée avec src/utils/theme.ts.
+      (function () {
+        var theme = null;
+        try { theme = localStorage.getItem('tchatreco:theme'); } catch (e) {}
+        if (theme !== 'dark' && theme !== 'light') {
+          theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.dataset.theme = theme;
+        if (theme === 'light') {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f8f6fd');
+        }
+      })();
+    </script>
     <meta name="description" content="Propose une chanson à Music Océane et vote pour les recos du tchat.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
