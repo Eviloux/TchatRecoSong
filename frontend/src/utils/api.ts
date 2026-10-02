@@ -25,3 +25,24 @@ export function getApiUrl(): string {
     throw new Error('Impossible de déduire automatiquement VITE_API_URL. Définissez VITE_API_URL pour votre déploiement.');
   }
 }
+
+const DEFAULT_TIMEOUT_MS = 10_000;
+
+/**
+ * `fetch` avec délai maximal : sans lui, une requête vers un backend Render
+ * en train de se réveiller peut rester en attente plusieurs minutes et bloquer
+ * l'interface. Lève une `DOMException` (`TimeoutError`/`AbortError`) à l'expiration.
+ */
+export async function fetchWithTimeout(
+  input: string,
+  init: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
