@@ -5,7 +5,7 @@
       <div class="banner__text">
         <LiveBadge class="banner__live" />
         <h1 class="banner__title">Fais découvrir ta chanson préférée à Océane</h1>
-        <p class="banner__subtitle">Colle un lien YouTube ou Spotify. Les plus votées passent en premier pendant le stream.</p>
+        <p class="banner__subtitle">Colle un lien YouTube ou Spotify : Océane pioche ses coups de cœur dans les recos pendant le stream, et tes votes lui montrent ce qui plaît au tchat.</p>
       </div>
     </header>
 
