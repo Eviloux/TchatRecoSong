@@ -75,21 +75,23 @@
   overflow: hidden;
   border-radius: vars.$radius-large;
   background: vars.$surface-color;
-  box-shadow: 0 10px 30px rgba(63, 49, 80, 0.08);
+  border: 1px solid vars.$border-color;
+  box-shadow: vars.$shadow;
 }
 
 .track {
   display: grid;
   grid-template-columns: 34px 52px minmax(0, 1fr) auto auto;
-  gap: 14px;
+  column-gap: 14px;
+  row-gap: 8px;
   align-items: center;
-  padding: 12px 18px;
+  padding: 14px 18px;
   border-top: 1px solid vars.$border-color;
 
   &:first-child {
     border-top: 0;
     // Le n°1 est mis en avant avec le vert « feuillage ».
-    background: linear-gradient(90deg, vars.$tertiary-pale, transparent 70%);
+    background: linear-gradient(90deg, rgba(159, 211, 154, 0.14), transparent 70%);
   }
 
   &__rank {
@@ -124,7 +126,7 @@
       height: 12px;
       border-radius: 50%;
       background: vars.$surface-color;
-      box-shadow: 0 0 0 2px rgba(63, 49, 80, 0.15);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
     }
   }
 
@@ -148,8 +150,7 @@
     }
   }
 
-  &__artist,
-  &__comment {
+  &__artist {
     font-size: 0.85rem;
     color: vars.$muted-color;
     white-space: nowrap;
@@ -157,8 +158,28 @@
     text-overflow: ellipsis;
   }
 
+  // Bulle pleine largeur sous la chanson : le commentaire n'est jamais tronqué.
   &__comment {
-    font-style: italic;
+    grid-column: 3 / -1;
+    margin: 0;
+    padding: 9px 13px;
+    border-radius: 4px 16px 16px 16px;
+    background: vars.$surface-raised;
+    color: vars.$text-color;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  &__comment-label {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: vars.$secondary-color;
   }
 
   &__actions {
@@ -244,12 +265,17 @@
 
   .track {
     grid-template-columns: 24px 42px minmax(0, 1fr) auto;
-    gap: 10px;
+    column-gap: 10px;
     padding: 10px 12px;
 
     &__cover {
       width: 42px;
       height: 42px;
+    }
+
+    &__comment {
+      grid-column: 2 / -1;
+      font-size: 0.86rem;
     }
 
     .chip {

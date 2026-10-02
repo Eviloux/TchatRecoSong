@@ -1,34 +1,38 @@
 // src/assets/styles/_variables.scss
-// Palette « Music Océane » : violet, bleu et vert pastel (chat lavande, feuillages, grenouilles).
+// Palette « Music Océane – Nuit violette » : fonds foncés, accents violet, bleu et vert pastel.
+// Contraste du texte ≥ 6,7:1 sur les cartes (recommandation WCAG : 4,5:1).
 
 $font-display: 'Fredoka', 'Nunito', ui-rounded, system-ui, sans-serif;
 $font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-$background-color: #f8f6fd; // lilas très clair
-$surface-color: #ffffff;
-$text-color: #3f3150; // prune : texte principal
-$muted-color: #6f6283;
-$border-color: #e4dcf5;
+$background-color: #1a1526; // violet nuit
+$surface-color: #272036; // cartes
+$surface-raised: #332a47; // bulles de commentaire, champs désactivés
+$text-color: #eee8f8;
+$muted-color: #b8accf;
+$border-color: #3d3354;
+$shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
 
-$primary-color: #9d7bea; // violet pastel
-$primary-strong: #5b2bb5; // violet profond : titres, liens, texte sur fond pâle
-$primary-pale: #eee6fd;
-$primary-hover: #e3d6fb;
+$primary-color: #b79cf2; // violet pastel
+$primary-strong: #b79cf2; // texte d'accent (titres, liens actifs)
+$primary-pale: #4a3a72; // fond violet foncé (pastilles, cœurs)
+$primary-hover: #574585;
 
-$secondary-color: #9cc9f0; // bleu pastel
-$secondary-strong: #1f5f95;
-$secondary-pale: #e3f1fc;
+$secondary-color: #8ec5f0; // bleu pastel
+$secondary-strong: #8ec5f0;
+$secondary-pale: #24415e;
 
-$tertiary-color: #a8cf8e; // vert pastel (feuillage)
-$tertiary-strong: #3f6b2a;
-$tertiary-pale: #eaf5e1;
+$tertiary-color: #9fd39a; // vert pastel (feuillage)
+$tertiary-strong: #9fd39a;
+$tertiary-pale: #29452d;
 
-// Dégradé des boutons : chaque arrêt garde un contraste ≥ 4,6:1 avec le texte blanc.
-$button-gradient: linear-gradient(120deg, #7048c2, #6a5acd 55%, #5b6fc4);
-$button-shadow: #48309a;
+// Boutons : texte foncé sur dégradé pastel, plus doux qu'un texte blanc sur fond vif.
+$button-gradient: linear-gradient(120deg, $primary-color, $secondary-color);
+$button-text: #1a1526;
+$button-shadow: rgba(0, 0, 0, 0.4);
 
-$danger-color: #b3261e;
-$danger-pale: #ffe3e0;
+$danger-color: #ffb4ab;
+$danger-pale: #4a2224;
 
 $spacing: 10px;
 $spacing-small: 12px;
