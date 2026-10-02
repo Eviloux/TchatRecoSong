@@ -54,6 +54,7 @@ import { getApiUrl } from '../utils/api';
 
 type SongListInstance = {
   refresh: () => Promise<void> | void;
+  markAsVoted: (songId: number) => void;
 };
 
 const API_URL = getApiUrl();
@@ -171,12 +172,15 @@ const submit = async () => {
       throw new Error(payload.detail ?? "Impossible d'enregistrer la chanson.");
     }
 
+    const song: { id: number } = await response.json();
+
     feedback.value = 'Merci ! Ta reco est dans la liste ♡';
     feedbackType.value = 'success';
     link.value = '';
     comment.value = '';
 
     if (songListRef.value) {
+      songListRef.value.markAsVoted(song.id);
       await songListRef.value.refresh();
     }
   } catch (error: any) {
