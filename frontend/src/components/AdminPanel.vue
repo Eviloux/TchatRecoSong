@@ -1,6 +1,6 @@
 <template>
   <section class="admin-panel">
-    <h2>Gestion des ban words</h2>
+    <h2>Chansons bannies</h2>
     <p v-if="!token" class="warning">
       Connectez-vous pour ajouter des règles de bannissement.
     </p>

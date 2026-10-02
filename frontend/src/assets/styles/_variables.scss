@@ -1,15 +1,40 @@
 // src/assets/styles/_variables.scss
+// Palette « Music Océane » : violet, bleu et vert pastel (chat lavande, feuillages, grenouilles).
 
-$font-family: 'Arial, sans-serif';
-$primary-color: #1abc9c;
-$secondary-color: #3498db;
-$accent-color: #e67e22;
-$background-color: #0f172a;
-$text-color: #f8fafc;
-$muted-color: #94a3b8;
+$font-display: 'Fredoka', 'Nunito', ui-rounded, system-ui, sans-serif;
+$font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+$background-color: #f8f6fd; // lilas très clair
+$surface-color: #ffffff;
+$text-color: #3f3150; // prune : texte principal
+$muted-color: #6f6283;
+$border-color: #e4dcf5;
+
+$primary-color: #9d7bea; // violet pastel
+$primary-strong: #5b2bb5; // violet profond : titres, liens, texte sur fond pâle
+$primary-pale: #eee6fd;
+$primary-hover: #e3d6fb;
+
+$secondary-color: #9cc9f0; // bleu pastel
+$secondary-strong: #1f5f95;
+$secondary-pale: #e3f1fc;
+
+$tertiary-color: #a8cf8e; // vert pastel (feuillage)
+$tertiary-strong: #3f6b2a;
+$tertiary-pale: #eaf5e1;
+
+// Dégradé des boutons : chaque arrêt garde un contraste ≥ 4,6:1 avec le texte blanc.
+$button-gradient: linear-gradient(120deg, #7048c2, #6a5acd 55%, #5b6fc4);
+$button-shadow: #48309a;
+
+$danger-color: #b3261e;
+$danger-pale: #ffe3e0;
+
 $spacing: 10px;
 $spacing-small: 12px;
 $spacing-medium: 20px;
 $spacing-large: 32px;
 
-$radius-medium: 12px;
+$radius-medium: 14px;
+$radius-large: 24px;
+$radius-pill: 999px;

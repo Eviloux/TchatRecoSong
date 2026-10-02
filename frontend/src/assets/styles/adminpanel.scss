@@ -1,77 +1,95 @@
-// src/assets/styles/adminpanel.scss
+// src/assets/styles/adminpanel.scss — règles de bannissement
 
 @use 'variables' as vars;
 @use 'mixins' as mixins;
 
 .admin-panel {
-  margin-top: vars.$spacing-large;
-  padding: vars.$spacing-large;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: vars.$radius-medium;
+  @include mixins.card-style;
+  display: grid;
+  gap: vars.$spacing-medium;
 
   h2 {
-    margin-top: 0;
+    font-size: 1.35rem;
   }
 
-  .warning {
-    color: vars.$accent-color;
+  .warning,
+  .ban-empty {
+    margin: 0;
+    color: vars.$muted-color;
   }
 
   .ban-list {
     list-style: none;
+    margin: 0;
     padding: 0;
-    margin: vars.$spacing-medium 0;
 
     li {
-      padding: vars.$spacing-small 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: vars.$spacing-small;
+      padding: vars.$spacing-small 0;
+      border-top: 1px solid vars.$border-color;
 
-      .ban-details {
-        flex: 1 1 auto;
-        min-width: 200px;
+      &:first-child {
+        border-top: 0;
       }
+    }
 
-      .ban-actions {
-        display: flex;
-        gap: vars.$spacing-small;
+    .ban-details {
+      flex: 1 1 240px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
 
-        button {
-          @include mixins.button-style;
-          padding: vars.$spacing-small vars.$spacing-medium;
+    .ban-actions {
+      display: flex;
+      gap: 8px;
 
-          &.danger {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-          }
+      button {
+        padding: 6px 12px;
+        border: 0;
+        border-radius: 10px;
+        background: vars.$secondary-pale;
+        color: vars.$secondary-strong;
+        font-weight: 800;
+        cursor: pointer;
+
+        &.danger {
+          background: vars.$danger-pale;
+          color: vars.$danger-color;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: wait;
         }
       }
     }
   }
 
-  .ban-empty {
-    color: vars.$muted-color;
-  }
-
   .ban-form {
     display: grid;
-    gap: vars.$spacing-medium;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: vars.$spacing-small;
+    align-items: end;
 
     .edit-info {
+      grid-column: 1 / -1;
       margin: 0;
       font-style: italic;
       color: vars.$muted-color;
     }
 
     .field {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      gap: 6px;
+      min-width: 0;
 
       label {
-        margin-bottom: vars.$spacing-small;
+        font-weight: 800;
+        font-size: 0.88rem;
       }
 
       input {
@@ -80,75 +98,37 @@
     }
 
     .form-actions {
+      grid-column: 1 / -1;
       display: flex;
-      gap: vars.$spacing-small;
       flex-wrap: wrap;
+      gap: vars.$spacing-small;
 
       button {
         @include mixins.button-style;
       }
 
       .secondary {
-        background: rgba(148, 163, 184, 0.2);
+        background: transparent;
+        box-shadow: none;
+        border: 2px solid vars.$text-color;
         color: vars.$text-color;
-        border: 1px solid rgba(148, 163, 184, 0.4);
       }
     }
   }
 
   .form-error {
-    margin-top: vars.$spacing-small;
-    color: vars.$accent-color;
-    font-weight: 600;
+    margin: 0;
+    color: vars.$danger-color;
+    font-weight: 700;
   }
 }
 
-@media (max-width: 768px) {
-  .admin-panel {
-    padding: vars.$spacing-medium;
+@media (max-width: 760px) {
+  .admin-panel .ban-form {
+    grid-template-columns: minmax(0, 1fr);
 
-    .ban-list {
-      li {
-        flex-direction: column;
-        align-items: stretch;
-
-        .ban-actions {
-          width: 100%;
-          justify-content: center;
-          flex-wrap: wrap;
-
-          button {
-            flex: 1 1 calc(50% - vars.$spacing-small);
-            min-width: 140px;
-          }
-        }
-      }
-    }
-
-    .ban-form {
-      .form-actions {
-        flex-direction: column;
-        align-items: stretch;
-
-        button {
-          width: 100%;
-          justify-content: center;
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .admin-panel {
-    .ban-list {
-      li {
-        .ban-actions {
-          button {
-            flex: 1 1 100%;
-          }
-        }
-      }
+    .form-actions button {
+      width: 100%;
     }
   }
 }

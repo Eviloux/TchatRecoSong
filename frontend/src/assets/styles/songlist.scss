@@ -1,154 +1,264 @@
-// src/assets/styles/songlist.scss
+// src/assets/styles/songlist.scss — classement façon playlist
 
 @use 'variables' as vars;
 @use 'mixins' as mixins;
 
 .song-list {
-  margin-top: vars.$spacing-large;
+  display: grid;
+  gap: vars.$spacing-small;
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: vars.$spacing-medium;
+    flex-wrap: wrap;
+    gap: vars.$spacing-small;
 
-    button {
-      @include mixins.button-style;
+    h2 {
+      font-size: 1.35rem;
     }
   }
 
-  &__items {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: vars.$spacing-medium;
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   &__empty {
+    @include mixins.card-style;
+    margin: 0;
     color: vars.$muted-color;
+    text-align: center;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+
+    button {
+      padding: 6px 14px;
+      border: 0;
+      border-radius: vars.$radius-pill;
+      background: vars.$surface-color;
+      color: vars.$muted-color;
+      font-family: vars.$font-family;
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+
+      &.is-active {
+        background: vars.$text-color;
+        color: vars.$surface-color;
+      }
+    }
+  }
+
+  .refresh {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid vars.$border-color;
+    background: vars.$surface-color;
+    color: vars.$primary-strong;
+    font-size: 1.1rem;
+    cursor: pointer;
   }
 }
 
-.song-card {
-  @include mixins.card-style;
-  display: flex;
-  justify-content: space-between;
+.playlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: vars.$radius-large;
+  background: vars.$surface-color;
+  box-shadow: 0 10px 30px rgba(63, 49, 80, 0.08);
+}
+
+.track {
+  display: grid;
+  grid-template-columns: 34px 52px minmax(0, 1fr) auto auto;
+  gap: 14px;
   align-items: center;
-  gap: vars.$spacing-large;
+  padding: 12px 18px;
+  border-top: 1px solid vars.$border-color;
+
+  &:first-child {
+    border-top: 0;
+    // Le n°1 est mis en avant avec le vert « feuillage ».
+    background: linear-gradient(90deg, vars.$tertiary-pale, transparent 70%);
+  }
+
+  &__rank {
+    font-family: vars.$font-display;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-align: center;
+    color: vars.$primary-color;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Pochette ronde façon vinyle (miniature réelle si disponible).
+  &__cover {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: vars.$surface-color;
+      box-shadow: 0 0 0 2px rgba(63, 49, 80, 0.15);
+    }
+  }
 
   &__info {
-    display: flex;
-    flex-direction: column;
+    min-width: 0;
+    display: grid;
+  }
 
-    h3 {
-      margin: 0 0 vars.$spacing-small;
-      color: vars.$primary-color;
-    }
+  &__title {
+    font-family: vars.$font-display;
+    font-weight: 600;
+    color: vars.$text-color;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
-    .artist {
-      margin: 0 0 vars.$spacing-small;
-      color: vars.$muted-color;
+    &:hover {
+      color: vars.$primary-strong;
+      text-decoration: underline;
     }
+  }
 
-    a {
-      color: vars.$accent-color;
-      text-decoration: none;
-    }
+  &__artist,
+  &__comment {
+    font-size: 0.85rem;
+    color: vars.$muted-color;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__comment {
+    font-style: italic;
   }
 
   &__actions {
     display: flex;
     align-items: center;
-    gap: vars.$spacing-medium;
+    gap: 8px;
+  }
 
-    .votes {
-      font-weight: bold;
-    }
-
-    button {
-      @include mixins.button-style;
-      padding: 0.35rem 0.9rem;
-    }
-
-    .vote-button[disabled],
-    .delete-button[disabled] {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .delete-button {
-      background: rgba(239, 68, 68, 0.18);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
-
-      &:hover:not([disabled]) {
-        background: rgba(239, 68, 68, 0.25);
-      }
-    }
+  .votes {
+    font-family: vars.$font-display;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 }
 
-@media (max-width: 768px) {
-  .song-list {
-    margin-top: vars.$spacing-medium;
+.chip {
+  padding: 3px 10px;
+  border-radius: vars.$radius-pill;
+  font-size: 0.75rem;
+  font-weight: 800;
 
-    &__header {
+  &--youtube {
+    background: vars.$danger-pale;
+    color: vars.$danger-color;
+  }
+
+  &--spotify {
+    background: vars.$tertiary-pale;
+    color: vars.$tertiary-strong;
+  }
+}
+
+.heart {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: vars.$radius-pill;
+  background: vars.$primary-pale;
+  color: vars.$primary-strong;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: vars.$primary-hover;
+  }
+
+  &.is-voted {
+    background: vars.$primary-strong;
+    color: vars.$surface-color;
+    cursor: default;
+  }
+
+  &:disabled:not(.is-voted) {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}
+
+.btn-danger {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: vars.$danger-pale;
+  color: vars.$danger-color;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}
+
+@media (max-width: 760px) {
+  .song-list .tabs button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .track {
+    grid-template-columns: 24px 42px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 10px 12px;
+
+    &__cover {
+      width: 42px;
+      height: 42px;
+    }
+
+    .chip {
+      display: none;
+    }
+
+    &__actions {
       flex-direction: column;
-      align-items: stretch;
-      gap: vars.$spacing-small;
-      text-align: center;
-
-      h2 {
-        margin-bottom: 0;
-      }
-
-      button {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  }
-
-  .song-card {
-    flex-direction: column;
-    align-items: stretch;
-    gap: vars.$spacing-medium;
-
-    &__info {
-      text-align: center;
-
-      a {
-        word-break: break-word;
-      }
-    }
-
-    &__actions {
-      width: 100%;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: vars.$spacing-small;
-
-      .votes {
-        flex-basis: 100%;
-        text-align: center;
-      }
-
-      button {
-        flex: 1 1 calc(50% - vars.$spacing-small);
-        min-width: 140px;
-        justify-content: center;
-      }
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .song-card {
-    &__actions {
-      button {
-        flex: 1 1 100%;
-      }
+      align-items: flex-end;
     }
   }
 }

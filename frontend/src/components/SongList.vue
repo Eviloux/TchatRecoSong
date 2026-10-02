@@ -1,32 +1,56 @@
 <template>
   <section class="song-list">
     <header class="song-list__header">
-      <h2>Recommandations enregistrées</h2>
-      <button type="button" @click="fetchSongs">Rafraîchir</button>
-    </header>
-    <ul v-if="songs.length" class="song-list__items">
-      <li v-for="song in songs" :key="song.id" class="song-card">
-        <div class="song-card__info">
-          <h3>{{ song.title }}</h3>
-          <p class="artist">{{ song.artist }}</p>
-          <a :href="song.link" target="_blank" rel="noopener">Ouvrir le lien</a>
-          <p v-if="song.comment" class="comment">{{ song.comment }}</p>
+      <h2>{{ isAdmin ? 'Recos du tchat' : 'Le top du tchat' }}</h2>
+      <div class="song-list__tools">
+        <div class="tabs" role="tablist" aria-label="Ordre du classement">
+          <button
+            v-for="option in sortOptions"
+            :key="option.value"
+            type="button"
+            role="tab"
+            :aria-selected="sortMode === option.value"
+            :class="{ 'is-active': sortMode === option.value }"
+            @click="sortMode = option.value"
+          >
+            {{ option.label }}
+          </button>
         </div>
-        <div class="song-card__actions">
-          <span class="votes">{{ song.votes }} vote(s)</span>
+        <button type="button" class="refresh" @click="fetchSongs" aria-label="Rafraîchir la liste">↻</button>
+      </div>
+    </header>
+
+    <ol v-if="sortedSongs.length" class="playlist">
+      <li v-for="(song, index) in sortedSongs" :key="song.id" class="track">
+        <span class="track__rank">{{ index + 1 }}</span>
+        <span class="track__cover" :style="coverStyle(song, index)">
+          <img v-if="song.thumbnail" :src="song.thumbnail" alt="" loading="lazy" />
+        </span>
+        <div class="track__info">
+          <a :href="song.link" target="_blank" rel="noopener noreferrer" class="track__title">{{ song.title }}</a>
+          <span class="track__artist">{{ song.artist }}</span>
+          <span v-if="song.comment" class="track__comment">« {{ song.comment }} »</span>
+        </div>
+        <span v-if="providerOf(song.link)" class="chip" :class="`chip--${providerOf(song.link)}`">
+          {{ providerOf(song.link) === 'youtube' ? 'YouTube' : 'Spotify' }}
+        </span>
+        <div class="track__actions">
           <button
             v-if="isVotingEnabled"
             type="button"
-            class="vote-button"
+            class="heart"
+            :class="{ 'is-voted': hasVoted(song.id) }"
             :disabled="hasVoted(song.id) || voting === song.id"
+            :aria-label="hasVoted(song.id) ? `Vote enregistré pour ${song.title}` : `Voter pour ${song.title}`"
             @click="vote(song.id)"
           >
-            {{ hasVoted(song.id) ? 'Vote enregistré' : 'Voter' }}
+            {{ hasVoted(song.id) ? '♥' : '♡' }} <span class="votes">{{ song.votes }}</span>
           </button>
+          <span v-else class="votes">{{ song.votes }} ♥</span>
           <button
             v-if="isAdmin"
             type="button"
-            class="delete-button"
+            class="btn-danger"
             :disabled="deleting === song.id"
             @click="remove(song.id)"
           >
@@ -34,8 +58,8 @@
           </button>
         </div>
       </li>
-    </ul>
-    <p v-else class="song-list__empty">Aucune recommandation pour le moment.</p>
+    </ol>
+    <p v-else class="song-list__empty">Aucune reco pour le moment. Sois la première personne à en proposer une ♪</p>
   </section>
 </template>
 
@@ -50,9 +74,21 @@ interface Song {
   title: string;
   artist: string;
   link: string;
+  thumbnail: string | null;
   comment: string | null;
   votes: number;
 }
+
+type SortMode = 'votes' | 'recent';
+type Provider = 'youtube' | 'spotify';
+
+const sortOptions: { value: SortMode; label: string }[] = [
+  { value: 'votes', label: 'Les plus votées' },
+  { value: 'recent', label: 'Les plus récentes' },
+];
+
+// Pochettes de repli (vinyles) quand le fournisseur ne donne pas de miniature.
+const COVER_COLORS = ['#9D7BEA', '#9CC9F0', '#A8CF8E', '#C3B1F2', '#BFDDF5'];
 
 const props = defineProps<{ token?: string | null; allowVoting?: boolean }>();
 const emit = defineEmits<{ (e: 'song-deleted'): void }>();
@@ -67,7 +103,28 @@ const votedSongs = ref<Set<number>>(new Set());
 
 const STORAGE_KEY = 'tchatreco:votedSongs';
 
+const sortMode = ref<SortMode>('votes');
+
 const isAdmin = computed(() => Boolean(props.token));
+
+// L'API renvoie les chansons par votes ; les identifiants croissent avec l'ordre d'ajout.
+const sortedSongs = computed(() =>
+  [...songs.value].sort((a, b) => (sortMode.value === 'votes' ? b.votes - a.votes : b.id - a.id)),
+);
+
+const providerOf = (link: string): Provider | null => {
+  try {
+    const host = new URL(link).hostname;
+    if (host.endsWith('youtube.com') || host === 'youtu.be') return 'youtube';
+    if (host.endsWith('spotify.com')) return 'spotify';
+  } catch {
+    // Anciens liens enregistrés sans https:// : pas de pastille.
+  }
+  return null;
+};
+
+const coverStyle = (song: Song, index: number) =>
+  song.thumbnail ? {} : { background: COVER_COLORS[index % COVER_COLORS.length] };
 const isVotingEnabled = computed(() => Boolean(props.allowVoting));
 
 const loadVotes = () => {
@@ -112,9 +169,8 @@ const vote = async (songId: number) => {
     });
     if (!response.ok) throw new Error('Vote impossible');
     const updated: Song = await response.json();
-    songs.value = songs.value
-      .map((song) => (song.id === songId ? { ...song, votes: updated.votes } : song))
-      .sort((a, b) => b.votes - a.votes);
+    // Le tri est assuré par `sortedSongs`.
+    songs.value = songs.value.map((song) => (song.id === songId ? { ...song, votes: updated.votes } : song));
     votedSongs.value.add(songId);
     persistVotes();
   } catch (error) {

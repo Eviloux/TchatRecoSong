@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import OperationalError
 
 from app import models  # noqa: F401 - ensure models are imported before create_all
-from app.api.routes import auth, ban_rules, public_submissions, songs
+from app.api.routes import auth, ban_rules, public_submissions, songs, twitch
 from app.config import (
     CORS_ORIGINS,
     FRONTEND_DIST_PATH,
@@ -103,6 +103,7 @@ app.include_router(songs.router, prefix="/songs", tags=["Songs"])
 app.include_router(ban_rules.router, prefix="/ban", tags=["BanRules"])
 app.include_router(public_submissions.router, prefix="/public/submissions", tags=["PublicSubmissions"])
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(twitch.router, prefix="/twitch", tags=["Twitch"])
 
 
 @app.get("/health", include_in_schema=False)
