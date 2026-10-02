@@ -1,38 +1,45 @@
 <template>
   <section class="home-view">
-    <header class="hero">
-      <h2 class="hero-title">Dépose ta reco en quelques secondes</h2>
-      <p class="hero-subtitle">Colle ton lien YouTube ou Spotify ci-dessous.</p>
+    <header class="banner">
+      <ChannelLogo :size="104" class="banner__logo" />
+      <div class="banner__text">
+        <LiveBadge class="banner__live" />
+        <h1 class="banner__title">Fais découvrir ta chanson préférée à Océane</h1>
+        <p class="banner__subtitle">Colle un lien YouTube ou Spotify. Les plus votées passent en premier pendant le stream.</p>
+      </div>
     </header>
 
-    <form class="submission-form" @submit.prevent="submit" novalidate>
-      <label for="link">Lien YouTube ou Spotify</label>
-      <input
-        id="link"
-        v-model="link"
-        type="url"
-        maxlength="2000"
-        placeholder="https://www.youtube.com/watch?v=..."
-        :disabled="loading || !backendReady"
-        required
-      />
-      <label for="comment">Commentaire (optionnel)</label>
-      <textarea
-        id="comment"
-        v-model="comment"
-        maxlength="1000"
-        placeholder="Un petit mot sur cette chanson…"
-        :disabled="loading || !backendReady"
-        rows="2"
-      ></textarea>
-      <button type="submit" :disabled="loading || !backendReady">
-        {{ loading ? 'Envoi en cours…' : 'Envoyer ma recommandation' }}
+    <form class="composer" @submit.prevent="submit" novalidate>
+      <div class="field">
+        <label for="link">Lien YouTube ou Spotify</label>
+        <input
+          id="link"
+          v-model="link"
+          type="url"
+          maxlength="2000"
+          placeholder="https://youtu.be/..."
+          :disabled="loading || !backendReady"
+          required
+        />
+      </div>
+      <div class="field">
+        <label for="comment">Un petit mot <span class="optional">(optionnel)</span></label>
+        <input
+          id="comment"
+          v-model="comment"
+          type="text"
+          maxlength="1000"
+          placeholder="Pour la session piano…"
+          :disabled="loading || !backendReady"
+        />
+      </div>
+      <button type="submit" class="btn" :disabled="loading || !backendReady">
+        {{ loading ? 'Envoi…' : 'Envoyer ♪' }}
       </button>
     </form>
 
-    <p v-if="!backendReady" class="backend-status">{{ backendWaitMessage }}</p>
-
-    <p v-if="feedback" class="feedback" :class="feedbackType">{{ feedback }}</p>
+    <p v-if="!backendReady" class="notice" role="status">{{ backendWaitMessage }}</p>
+    <p v-if="feedback" class="notice" :class="`notice--${feedbackType}`" role="status">{{ feedback }}</p>
 
     <SongList ref="songListRef" allow-voting />
   </section>
@@ -40,6 +47,8 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import ChannelLogo from '../components/ChannelLogo.vue';
+import LiveBadge from '../components/LiveBadge.vue';
 import SongList from '../components/SongList.vue';
 import { getApiUrl } from '../utils/api';
 
@@ -56,7 +65,7 @@ const loading = ref(false);
 const backendReady = ref(true);
 const songListRef = ref<SongListInstance | null>(null);
 let availabilityTimer: ReturnType<typeof window.setInterval> | undefined;
-const backendWaitMessage = 'Veuillez attendre que le backend soit démarré.';
+const backendWaitMessage = 'Le serveur se réveille, encore quelques secondes…';
 
 const YOUTUBE_REGEX = /^(https?:\/\/)?((www|m)\.)?(youtube\.com|youtu\.be)\//i;
 const SPOTIFY_REGEX = /^(https?:\/\/)?(open\.)?spotify\.com\//i;
@@ -162,7 +171,7 @@ const submit = async () => {
       throw new Error(payload.detail ?? "Impossible d'enregistrer la chanson.");
     }
 
-    feedback.value = 'Merci ! Ta recommandation a été enregistrée.';
+    feedback.value = 'Merci ! Ta reco est dans la liste ♡';
     feedbackType.value = 'success';
     link.value = '';
     comment.value = '';

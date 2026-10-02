@@ -5,14 +5,37 @@
 @use 'songlist' as *;
 @use 'adminpanel' as *;
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: $font-family;
-  background: radial-gradient(circle at top, rgba(30, 64, 175, 0.35), transparent),
-    $background-color;
-  color: $text-color;
   margin: 0;
-  padding: 0;
   min-height: 100vh;
+  font-family: $font-family;
+  line-height: 1.5;
+  color: $text-color;
+  background:
+    radial-gradient(circle at 10% 0%, $primary-pale, transparent 45%),
+    radial-gradient(circle at 95% 10%, $secondary-pale, transparent 40%),
+    $background-color;
+}
+
+h1,
+h2,
+h3 {
+  font-family: $font-display;
+  font-weight: 600;
+  margin: 0;
+  text-wrap: balance;
+}
+
+a,
+button,
+input {
+  @include focus-ring;
 }
 
 #app {
@@ -21,16 +44,28 @@ body {
   flex-direction: column;
 }
 
+// ---------- En-tête ----------
 .app-header {
-  padding: $spacing-large;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  backdrop-filter: blur(12px);
-  background: rgba(15, 23, 42, 0.7);
+  flex-wrap: wrap;
+  gap: $spacing-small;
+  padding: 14px $spacing-large;
 
   .app-title {
-    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: $font-display;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: $text-color;
+    text-decoration: none;
+
+    &__note {
+      color: $primary-color;
+    }
   }
 
   .app-nav {
@@ -39,18 +74,13 @@ body {
 
     a {
       color: $text-color;
+      font-weight: 800;
       text-decoration: none;
-      font-weight: 600;
-      position: relative;
 
-      &.router-link-active::after {
-        content: '';
-        position: absolute;
-        bottom: -6px;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, $primary-color, $secondary-color);
+      &.router-link-active {
+        color: $primary-strong;
+        text-decoration: underline wavy $secondary-color;
+        text-underline-offset: 6px;
       }
     }
   }
@@ -58,166 +88,247 @@ body {
 
 .app-main {
   flex: 1;
-  padding: $spacing-large;
-  max-width: 960px;
   width: 100%;
+  max-width: 1040px;
   margin: 0 auto;
+  padding: 0 $spacing-large $spacing-large;
 }
 
-.home-view {
-  display: grid;
-  gap: $spacing-large;
+// ---------- Composants partagés ----------
+.btn {
+  @include button-style;
+}
 
-  .hero {
-    @include card-style;
-    display: grid;
-    gap: $spacing;
+.channel-logo {
+  width: var(--logo-size);
+  height: var(--logo-size);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 4px solid $surface-color;
+  box-shadow: 0 0 0 3px $primary-color;
+  background: $primary-pale;
 
-    .hero-title {
-      font-size: clamp(1.6rem, 2.2vw, 2.4rem);
-      margin: 0;
-    }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 
-    .hero-subtitle {
-      color: $muted-color;
-      font-size: 1rem;
+  &__fallback {
+    font-family: $font-display;
+    font-weight: 700;
+    font-size: calc(var(--logo-size) * 0.32);
+    color: $primary-strong;
+  }
+}
+
+// Badge de statut Twitch : rouge vif seulement quand la chaîne est vraiment en direct.
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  border-radius: $radius-pill;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: $primary-pale;
+  color: $primary-strong;
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--live {
+    background: #e91916;
+    color: #fff;
+
+    .live-badge__dot {
+      background: #fff;
+      animation: live-pulse 1.6s ease-in-out infinite;
     }
   }
 
-  .submission-form {
+  &--offline {
+    background: #ece8f3;
+    color: $muted-color;
+  }
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-badge--live .live-badge__dot {
+    animation: none;
+  }
+}
+
+.notice {
+  margin: 0;
+  padding: $spacing $spacing-medium;
+  border-radius: $radius-medium;
+  font-weight: 700;
+  background: $secondary-pale;
+  color: $secondary-strong;
+
+  &--success {
+    background: $tertiary-pale;
+    color: $tertiary-strong;
+  }
+
+  &--error {
+    background: $danger-pale;
+    color: $danger-color;
+  }
+}
+
+// ---------- Page viewers ----------
+.home-view {
+  display: grid;
+  gap: $spacing-medium;
+
+  .banner {
+    @include card-style;
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 22px;
+    align-items: center;
+    padding: 26px;
+
+    // Feuillage et notes, en clin d'œil aux panneaux de la chaîne.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: auto -40px -60px auto;
+      width: 220px;
+      height: 160px;
+      border-radius: 50%;
+      background: $tertiary-pale;
+    }
+
+    &::after {
+      content: '♪ ♫ ♪';
+      position: absolute;
+      top: 12px;
+      right: 22px;
+      font-size: 2rem;
+      letter-spacing: 0.3em;
+      color: $secondary-color;
+    }
+
+    &__text {
+      position: relative;
+      display: grid;
+      gap: 6px;
+    }
+
+    &__live {
+      justify-self: start;
+    }
+
+    &__title {
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      line-height: 1.15;
+    }
+
+    &__subtitle {
+      margin: 0;
+      color: $muted-color;
+    }
+  }
+
+  .composer {
     @include card-style;
     display: grid;
-    gap: $spacing;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+    gap: $spacing-small;
+    align-items: end;
+    border: 2px dashed $primary-color;
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    label {
+      font-weight: 800;
+      font-size: 0.88rem;
+    }
+
+    .optional {
+      font-weight: 600;
+      color: $muted-color;
+    }
 
     input {
       @include input-style;
     }
-
-    button {
-      @include button-style;
-      justify-self: flex-start;
-
-      &:disabled {
-        cursor: not-allowed;
-        opacity: 0.7;
-      }
-    }
-  }
-
-  .backend-status {
-    @include card-style;
-    border: 1px dashed rgba(226, 232, 240, 0.4);
-    color: $muted-color;
-    font-weight: 500;
-  }
-
-  .feedback {
-    margin: 0 0 $spacing 0;
-    font-weight: 600;
-
-    &.error {
-      color: $accent-color;
-    }
-
-    &.success {
-      color: $primary-color;
-    }
   }
 }
 
-@media (max-width: 900px) {
-  .app-main {
-    padding: $spacing-medium;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-header {
-    padding: $spacing-medium;
-    flex-direction: column;
-    align-items: stretch;
-    gap: $spacing-medium;
-
-    .app-nav {
-      width: 100%;
-      flex-wrap: wrap;
-      gap: $spacing-small;
-      justify-content: center;
-
-      a {
-        flex: 1 1 calc(50% - $spacing-small);
-        text-align: center;
-        padding: 0.55rem 0.75rem;
-        border-radius: $radius-medium;
-        background: rgba(15, 23, 42, 0.55);
-      }
-    }
-  }
-
-  .home-view {
-    .hero {
-      text-align: center;
-    }
-
-    .submission-form {
-      button {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  }
-
-  .admin-view {
-    .login-options {
-      padding: $spacing-medium;
-
-      .email-login {
-        max-width: none;
-      }
-    }
-
-    .logout {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .app-header {
-    .app-nav {
-      a {
-        flex: 1 1 100%;
-      }
-    }
-  }
-
-  .home-view {
-    .hero-title {
-      font-size: 1.5rem;
-    }
-
-    .submission-form {
-      input {
-        font-size: 0.95rem;
-      }
-    }
-  }
-
-  .app-main {
-    padding: $spacing-medium $spacing;
-  }
-}
-
+// ---------- Connexion & admin ----------
 .admin-view {
+  display: grid;
+  gap: $spacing-medium;
+
+  > header {
+    display: grid;
+    gap: 4px;
+
+    h2 {
+      font-size: 1.6rem;
+    }
+
+    p {
+      margin: 0;
+      color: $muted-color;
+    }
+  }
+
   .error {
-    margin: 0 0 $spacing 0;
+    margin: 0;
     padding: $spacing;
     border-radius: $radius-medium;
-    background: rgba(220, 38, 38, 0.18);
-    color: $accent-color;
-    font-weight: 600;
+    background: $danger-pale;
+    color: $danger-color;
+    font-weight: 700;
     text-align: center;
+  }
+
+  .loading {
+    @include card-style;
+    text-align: center;
+  }
+
+  .admin-content {
+    display: grid;
+    gap: $spacing-large;
+  }
+
+  .logout {
+    justify-self: start;
+    padding: 8px 18px;
+    border-radius: $radius-pill;
+    border: 2px solid $text-color;
+    background: transparent;
+    color: $text-color;
+    font-weight: 800;
+    cursor: pointer;
   }
 
   .login-options {
@@ -225,17 +336,16 @@ body {
     display: grid;
     gap: $spacing-medium;
     justify-items: center;
+    padding: $spacing-large;
 
     .email-login {
       width: 100%;
       max-width: 320px;
       display: grid;
       gap: $spacing-small;
-      justify-items: stretch;
 
       label {
-        font-weight: 600;
-        justify-self: flex-start;
+        font-weight: 800;
       }
 
       input {
@@ -263,24 +373,8 @@ body {
         content: '';
         flex: 1;
         height: 1px;
-        background: rgba(148, 163, 184, 0.2);
+        background: $border-color;
       }
-
-      span {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 2rem;
-      }
-    }
-
-    button {
-      @include button-style;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      max-width: 320px;
     }
 
     #google-login {
@@ -289,20 +383,9 @@ body {
       width: 100%;
       max-width: 320px;
       min-height: 48px;
-
-      > div {
-        width: 100% !important;
-        display: inline-flex !important;
-        justify-content: center;
-      }
-
-      div[role='button'] {
-        width: 100% !important;
-        min-height: 48px !important;
-        border-radius: $radius-medium !important;
-      }
     }
 
+    // Couleurs officielles Twitch conservées.
     .twitch-login-btn {
       display: inline-flex;
       align-items: center;
@@ -312,46 +395,70 @@ body {
       max-width: 320px;
       padding: 12px 16px;
       border: none;
-      border-radius: $radius-medium;
+      border-radius: $radius-pill;
       background: #9146ff;
       color: #fff;
-      font-size: 0.95rem;
+      font-family: $font-display;
+      font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
 
       &:hover:not(:disabled) {
-        background: #7c2fff;
+        background: #772ce8;
       }
 
       &:disabled {
         opacity: 0.7;
         cursor: not-allowed;
       }
-
-      svg {
-        flex-shrink: 0;
-      }
     }
 
     .login-hint {
+      margin: 0;
       color: $muted-color;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+  }
+}
+
+// ---------- Responsive ----------
+@media (max-width: 760px) {
+  .app-header {
+    padding: 12px 16px;
+  }
+
+  .app-main {
+    padding: 0 16px 24px;
+  }
+
+  .home-view {
+    .banner {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+      text-align: center;
+      padding: 20px;
+
+      &::after {
+        font-size: 1.3rem;
+        right: 12px;
+      }
+
+      &__live {
+        justify-self: center;
+      }
+    }
+
+    .composer {
+      grid-template-columns: minmax(0, 1fr);
+
+      .btn {
+        width: 100%;
+      }
     }
   }
 
-  .admin-content {
-    display: grid;
-    gap: $spacing-large;
-  }
-
-  .logout {
-    @include button-style;
-    justify-self: flex-start;
-  }
-
-  .loading {
-    @include card-style;
-    padding: $spacing-large;
-    text-align: center;
+  .admin-view .logout {
+    width: 100%;
   }
 }
