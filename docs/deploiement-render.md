@@ -37,7 +37,7 @@ on le teste, puis on bascule. L'ancien front reste en ligne pendant ce temps.
 
 | Variable | Valeur |
 |---|---|
-| `NODE_VERSION` | `22` |
+| `NODE_VERSION` | `22.23.4` (version corrigée, à mettre à jour à chaque security release Node) |
 | `VITE_API_URL` | URL du back, ex. `https://tchatrecosong.onrender.com` (sans `/` final) |
 | `VITE_GOOGLE_CLIENT_ID` | optionnel (le front le récupère aussi via l'API) |
 | `VITE_TWITCH_CLIENT_ID` | optionnel (idem) |
