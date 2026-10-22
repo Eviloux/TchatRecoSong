@@ -52,7 +52,7 @@ TchatRecoSong/
 |   |   |-- components/     SongList, AdminPanel
 |   |   |-- utils/          api.ts, adminSession.ts
 |   |   |-- assets/styles/  SCSS (variables, mixins, composants)
-|   |-- server.js           Serveur de production (SPA fallback)
+|   |-- server.js           Sert le build en local (SPA fallback)
 |   |-- vite.config.js
 |
 |-- render.yaml            Configuration de deploiement Render
@@ -201,13 +201,9 @@ Le frontend (`utils/api.ts`) determine l'URL du backend selon le contexte :
 2. `http://localhost:8000` si le frontend tourne en local
 3. Deduction automatique sur Render : remplacement de `-front` dans le hostname (ex: `tchatrecosong-front.onrender.com` -> `tchatrecosong.onrender.com`)
 
-### Serveur frontend de production
+### Hebergement du frontend
 
-Le fichier `server.js` est un serveur HTTP Node.js sans dependance externe qui :
-- Sert les fichiers statiques du build Vite (`dist/`)
-- Redirige toutes les routes sans extension vers `index.html` (SPA fallback)
-- Protege contre le path traversal
-- Ajoute les headers de securite sur chaque reponse
+En production, le build Vite (`dist/`) est servi par un Static Site Render (reecriture `/*` vers `index.html`, en-tetes de securite configures dans `render.yaml`). `server.js` reste disponible pour servir le build en local (`npm run start`).
 
 ---
 
@@ -219,13 +215,17 @@ Le fichier `server.js` est un serveur HTTP Node.js sans dependance externe qui :
 |----------|--------|-------------|
 | `DATABASE_URL` | *(requis)* | URL PostgreSQL complete |
 | `CORS_ORIGINS` | `https://tchatrecosong-front.onrender.com,http://localhost:5173` | Origines CORS autorisees (separees par virgule) |
-| `ADMIN_JWT_SECRET` | *(warning si absent)* | Secret de signature JWT. **A definir en production.** |
+| `ADMIN_JWT_SECRET` | *(aleatoire si absent)* | Secret de signature JWT (32 caracteres min). **A definir en production.** |
 | `ADMIN_TOKEN_TTL_MINUTES` | `720` | Duree de validite des tokens admin (12h) |
 | `GOOGLE_CLIENT_ID` | *(optionnel)* | ID client OAuth Google |
-| `ALLOWED_GOOGLE_EMAILS` | *(vide = tous autorises)* | Emails Google autorises (separes par virgule) |
+| `ALLOWED_GOOGLE_EMAILS` | *(vide = personne)* | Emails Google autorises (separes par virgule) |
+| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | *(optionnel)* | Connexion admin Twitch et badge « En live » |
+| `ALLOWED_TWITCH_LOGINS` | *(vide = personne)* | Logins Twitch autorises (separes par virgule) |
+| `TWITCH_CHANNEL_LOGIN` | `music_oceane` | Chaine dont le statut live est affiche |
+| `TRUSTED_PROXY_COUNT` | `1` | Nombre de proxys devant l'app (Render = 1), pour le rate limiting par IP |
 | `ADMIN_PASSWORD_LOGIN_ENABLED` | `true` | Activer la connexion par mot de passe |
 | `ADMIN_DEFAULT_EMAIL` | `admin@tchatrecosong.local` | Email de l'admin par defaut |
-| `ADMIN_DEFAULT_PASSWORD` | `recoadmin` | Mot de passe par defaut (si aucun hash fourni) |
+| `ADMIN_DEFAULT_PASSWORD` | *(aucun)* | Mot de passe du compte admin par defaut ; sans lui, aucun compte n'est cree |
 | `FRONTEND_DIST_PATH` | `../frontend/dist` | Chemin vers le build frontend |
 | `FRONTEND_SUBMIT_REDIRECT_URL` | *(optionnel)* | URL de redirection si le build frontend est absent |
 
@@ -234,7 +234,8 @@ Le fichier `server.js` est un serveur HTTP Node.js sans dependance externe qui :
 | Variable | Description |
 |----------|-------------|
 | `VITE_API_URL` | URL du backend (ex: `https://tchatrecosong.onrender.com`) |
-| `VITE_GOOGLE_CLIENT_ID` | ID client Google (meme valeur que `GOOGLE_CLIENT_ID` cote backend) |
+| `VITE_GOOGLE_CLIENT_ID` | ID client Google (optionnel, aussi recupere via l'API) |
+| `VITE_TWITCH_CLIENT_ID` | ID client Twitch (optionnel, aussi recupere via l'API) |
 
 ---
 
@@ -272,40 +273,20 @@ Le frontend sera accessible sur `http://localhost:5173`.
 
 ## Deploiement sur Render
 
-Le fichier `render.yaml` definit deux services :
+Guide pas a pas : **[docs/deploiement-render.md](docs/deploiement-render.md)**. Le fichier `render.yaml` decrit la meme configuration.
 
 | Service | Type | Plan | Description |
 |---------|------|------|-------------|
-| **TchatRecoSong** | Web (Python) | Free | Backend FastAPI (`uvicorn app.main:app`) |
-| **TchatRecoSong-front** | Web (Node) | Free | Frontend Vue (`node server.js`) |
-
-### Configuration des variables sur Render
-
-**Backend** (onglet Environment du service Python) :
-- `DATABASE_URL` : URL PostgreSQL (Neon ou Render Postgres)
-- `ADMIN_JWT_SECRET` : generer avec `openssl rand -base64 32`
-- `GOOGLE_CLIENT_ID` : depuis Google Cloud Console
-- `ALLOWED_GOOGLE_EMAILS` : emails autorises
-- `CORS_ORIGINS` : URL du frontend
-
-**Frontend** (onglet Environment du service Node) :
-- `VITE_API_URL` : URL du backend
-- `VITE_GOOGLE_CLIENT_ID` : meme valeur que `GOOGLE_CLIENT_ID`
+| **TchatRecoSong** | Web Service (Python) | Free | Backend FastAPI, garde eveille par un ping externe sur `/health` |
+| **TchatRecoSong-web** | Static Site | Free | Frontend Vue (build Vite servi par le CDN Render, ne s'endort jamais) |
 
 ### Points d'attention
 
-- **`ADMIN_JWT_SECRET`** : obligatoire en production. Sans lui, un secret par defaut public est utilise.
-- **`DATABASE_URL` avec Neon** : supprimer le suffixe `&channel_binding=require` de l'URL (incompatible avec psycopg2). Garder uniquement `?sslmode=require`.
-- **Free tier Render** : le backend s'endort apres 15 min d'inactivite. Le frontend affiche un message d'attente et poll `/health` toutes les 5 secondes jusqu'au reveil.
-- **CORS** : la valeur par defaut couvre `tchatrecosong-front.onrender.com`. Si le frontend a un autre nom, mettre a jour `CORS_ORIGINS`.
-
-### URLs en production
-
-| Page | URL |
-|------|-----|
-| Portail public (viewers) | `https://tchatrecosong-front.onrender.com/submit` |
-| Connexion admin | `https://tchatrecosong-front.onrender.com/login` |
-| Tableau de bord admin | `https://tchatrecosong-front.onrender.com/admin` |
+- **`ADMIN_JWT_SECRET`** : obligatoire en production (32 caracteres minimum). Sans lui, un secret aleatoire est genere et les sessions admin sont perdues a chaque redemarrage.
+- **`ALLOWED_GOOGLE_EMAILS` / `ALLOWED_TWITCH_LOGINS`** : une liste vide refuse tout le monde.
+- **`DATABASE_URL` avec Neon** : supprimer `&channel_binding=require` de l'URL, garder `?sslmode=require`.
+- **`CORS_ORIGINS`** : doit contenir l'URL exacte du front (sans `/` final).
+- **Static Site** : la regle de reecriture `/*` vers `/index.html` est indispensable pour les routes Vue.
 
 ---
 
